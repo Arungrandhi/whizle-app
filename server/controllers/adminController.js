@@ -1,5 +1,6 @@
 const Business = require('../models/Business');
 const Token = require('../models/Token');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
 // @desc    Get Business Profile of Logged-in Admin
 // @route   GET /api/admin/business
@@ -50,8 +51,12 @@ const updateBusinessProfile = async (req, res) => {
     if (state) business.state = state;
     if (city) business.city = city;
     if (zipCode) business.zipCode = zipCode;
-    if (logo) business.logo = logo;
-    if (backgroundImage) business.backgroundImage = backgroundImage;
+    if (logo) {
+      business.logo = await uploadToCloudinary(logo, 'logos');
+    }
+    if (backgroundImage) {
+      business.backgroundImage = await uploadToCloudinary(backgroundImage, 'backgrounds');
+    }
     if (primaryColor) business.primaryColor = primaryColor;
     if (queueConfig) {
       if (queueConfig.name) business.queueConfig.name = queueConfig.name;

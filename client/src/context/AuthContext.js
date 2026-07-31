@@ -3,7 +3,9 @@ import axios from 'axios';
 
 const AuthContext = createContext();
 
-const API_URL = `http://${window.location.hostname}:5000/api`;
+const API_URL = process.env.REACT_APP_API_URL 
+  ? `${process.env.REACT_APP_API_URL}/api`
+  : `http://${window.location.hostname}:5000/api`;
 
 // Create custom axios instance
 export const api = axios.create({

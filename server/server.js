@@ -47,8 +47,29 @@ io.on('connection', (socket) => {
 // Connect to Database
 connectDB();
 
-// Middlewares
-app.use(cors());
+// CORS Configuration
+const allowedOrigins = [
+  'http://localhost:3000',
+  'https://whizle-app.onrender.com'
+];
+
+app.use(cors({
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps, curl, or Postman)
+    if (!origin) return callback(null, true);
+    
+    if (
+      origin.startsWith('http://localhost:') || 
+      origin.endsWith('.netlify.app') || 
+      allowedOrigins.includes(origin)
+    ) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '10mb' })); // expanded limit for base64 branding images
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 

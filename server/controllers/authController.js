@@ -1,6 +1,7 @@
 const User = require('../models/User');
 const Business = require('../models/Business');
 const jwt = require('jsonwebtoken');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
 // Generate JWT Token
 const generateToken = (id) => {
@@ -49,6 +50,16 @@ const registerAdmin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Business email already registered' });
     }
 
+    // Upload logo and background to Cloudinary if they are base64 strings
+    let logoUrl = '';
+    let backgroundUrl = '';
+    if (logo) {
+      logoUrl = await uploadToCloudinary(logo, 'logos');
+    }
+    if (backgroundImage) {
+      backgroundUrl = await uploadToCloudinary(backgroundImage, 'backgrounds');
+    }
+
     // Create Business Profile
     const business = await Business.create({
       domain,
@@ -61,8 +72,8 @@ const registerAdmin = async (req, res) => {
       state,
       city,
       zipCode,
-      logo,
-      backgroundImage,
+      logo: logoUrl,
+      backgroundImage: backgroundUrl,
       primaryColor,
       queueConfig: {
         name: queueName,

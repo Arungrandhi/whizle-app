@@ -3,6 +3,7 @@ const User = require('../models/User');
 const Token = require('../models/Token');
 const Ringtone = require('../models/Ringtone');
 const Ad = require('../models/Ad');
+const { uploadToCloudinary } = require('../config/cloudinary');
 
 // @desc    Get All Registered Businesses & Admins
 // @route   GET /api/superadmin/businesses
@@ -269,9 +270,12 @@ const createRingtone = async (req, res) => {
       await Ringtone.updateMany({}, { isDefault: false });
     }
 
+    // Upload ringtone file to Cloudinary (resource_type: video is required for audio)
+    const fileUrl = await uploadToCloudinary(file, 'ringtones', 'video');
+
     const ringtone = await Ringtone.create({
       name,
-      file,
+      file: fileUrl,
       duration: duration || '0:15 sec',
       isDefault: shouldBeDefault,
       isActive: true
@@ -489,11 +493,14 @@ const createAd = async (req, res) => {
     const views = Math.floor(Math.random() * 15000) + 1200;
     const clicks = Math.floor(views * (Math.random() * 0.08 + 0.01)); // 1% to 9% CTR
 
+    // Upload ad file to Cloudinary
+    const fileUrl = await uploadToCloudinary(file, 'ads');
+
     const ad = await Ad.create({
       name,
       positions: finalPositions,
       position: finalPositions[0] || 'Home Page 1',
-      file,
+      file: fileUrl,
       url,
       views,
       clicks,
@@ -529,7 +536,9 @@ const updateAd = async (req, res) => {
       ad.position = req.body.position;
       ad.positions = [req.body.position];
     }
-    if (file) ad.file = file;
+    if (file) {
+      ad.file = await uploadToCloudinary(file, 'ads');
+    }
     if (url) ad.url = url;
 
     // Validate and update targeting if provided
