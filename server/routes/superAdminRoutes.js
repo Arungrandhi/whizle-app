@@ -4,6 +4,7 @@ const {
   getBusinesses,
   getBusinessDetail,
   deleteBusiness,
+  updateBusiness,
   getUsers,
   getGlobalMetrics,
   
@@ -28,6 +29,7 @@ router.use(authorize('superadmin'));
 
 router.get('/businesses', getBusinesses);
 router.get('/businesses/:id', getBusinessDetail);
+router.put('/businesses/:id', updateBusiness);
 router.delete('/businesses/:id', deleteBusiness);
 
 router.get('/users', getUsers);

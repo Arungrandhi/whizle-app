@@ -226,7 +226,7 @@ const getGlobalMetrics = async (req, res) => {
     const totalTokens = await Token.countDocuments();
     const totalWaitingTokens = await Token.countDocuments({ status: 'waiting' });
     const totalServedTokens = await Token.countDocuments({ status: 'completed' });
-    const totalAds = await Ad.countDocuments();
+    const totalAds = await Ad.countDocuments({ isActive: true });
 
     res.json({
       success: true,
@@ -249,9 +249,27 @@ const getGlobalMetrics = async (req, res) => {
 
 const getRingtones = async (req, res) => {
   try {
-    const ringtones = await Ringtone.find().sort({ createdAt: -1 });
+    let ringtones = await Ringtone.find().sort({ createdAt: -1 });
+    
+    // Self-healing database check: ensure exactly one active ringtone exists
+    const activeRingtones = ringtones.filter(r => r.isActive);
+    if (activeRingtones.length > 1) {
+      const defaultRingtone = ringtones.find(r => r.isDefault);
+      const ringtoneToKeepActive = defaultRingtone || activeRingtones[0];
+      
+      await Ringtone.updateMany({ _id: { $ne: ringtoneToKeepActive._id } }, { isActive: false });
+      await Ringtone.updateOne({ _id: ringtoneToKeepActive._id }, { isActive: true });
+      
+      ringtones = await Ringtone.find().sort({ createdAt: -1 });
+    } else if (activeRingtones.length === 0 && ringtones.length > 0) {
+      const defaultRingtone = ringtones.find(r => r.isDefault) || ringtones[0];
+      await Ringtone.updateOne({ _id: defaultRingtone._id }, { isActive: true, isDefault: true });
+      ringtones = await Ringtone.find().sort({ createdAt: -1 });
+    }
+    
     res.json({ success: true, ringtones });
   } catch (error) {
+    console.error('Get ringtones error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -267,7 +285,7 @@ const createRingtone = async (req, res) => {
     const shouldBeDefault = isDefault || count === 0;
 
     if (shouldBeDefault) {
-      await Ringtone.updateMany({}, { isDefault: false });
+      await Ringtone.updateMany({}, { isDefault: false, isActive: false });
     }
 
     // Upload ringtone file to Cloudinary (resource_type: video is required for audio)
@@ -278,7 +296,7 @@ const createRingtone = async (req, res) => {
       file: fileUrl,
       duration: duration || '0:15 sec',
       isDefault: shouldBeDefault,
-      isActive: true
+      isActive: shouldBeDefault // Only active if it's default
     });
 
     const io = req.app.get('io');
@@ -300,7 +318,7 @@ const setDefaultRingtone = async (req, res) => {
     if (!ringtone) return res.status(404).json({ success: false, message: 'Ringtone not found' });
 
     // Set all others to false
-    await Ringtone.updateMany({}, { isDefault: false });
+    await Ringtone.updateMany({}, { isDefault: false, isActive: false });
 
     // Set this one to true and active
     ringtone.isDefault = true;
@@ -344,8 +362,23 @@ const toggleRingtone = async (req, res) => {
   try {
     const ringtone = await Ringtone.findById(req.params.id);
     if (!ringtone) return res.status(404).json({ success: false, message: 'Ringtone not found' });
-    ringtone.isActive = !ringtone.isActive;
-    await ringtone.save();
+
+    if (ringtone.isActive) {
+      // Trying to deactivate
+      if (ringtone.isDefault) {
+        return res.status(400).json({ success: false, message: 'Default ringtone must remain active' });
+      }
+      ringtone.isActive = false;
+      await ringtone.save();
+      // Revert active status to default ringtone
+      await Ringtone.updateOne({ isDefault: true }, { isActive: true });
+    } else {
+      // Trying to activate
+      // Deactivate all others
+      await Ringtone.updateMany({}, { isActive: false });
+      ringtone.isActive = true;
+      await ringtone.save();
+    }
 
     const io = req.app.get('io');
     if (io) {
@@ -354,13 +387,27 @@ const toggleRingtone = async (req, res) => {
 
     res.json({ success: true, ringtone });
   } catch (error) {
+    console.error('Toggle ringtone error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
 
 const deleteRingtone = async (req, res) => {
   try {
+    const ringtone = await Ringtone.findById(req.params.id);
+    if (!ringtone) return res.status(404).json({ success: false, message: 'Ringtone not found' });
+
+    if (ringtone.isDefault) {
+      return res.status(400).json({ success: false, message: 'Cannot delete the default system ringtone' });
+    }
+
+    const wasActive = ringtone.isActive;
     await Ringtone.findByIdAndDelete(req.params.id);
+
+    if (wasActive) {
+      // Make default ringtone active
+      await Ringtone.updateOne({ isDefault: true }, { isActive: true });
+    }
 
     const io = req.app.get('io');
     if (io) {
@@ -369,6 +416,7 @@ const deleteRingtone = async (req, res) => {
 
     res.json({ success: true, message: 'Ringtone deleted successfully' });
   } catch (error) {
+    console.error('Delete ringtone error:', error);
     res.status(500).json({ success: false, message: 'Server error' });
   }
 };
@@ -674,10 +722,61 @@ const deleteAd = async (req, res) => {
   }
 };
 
+const updateBusiness = async (req, res) => {
+  try {
+    const businessId = req.params.id;
+    const business = await Business.findById(businessId);
+    if (!business) {
+      return res.status(404).json({ success: false, message: 'Business not found' });
+    }
+
+    const {
+      name,
+      category,
+      phone,
+      address,
+      website,
+      maxCapacity,
+      queueConfig
+    } = req.body;
+
+    if (name) business.name = name;
+    if (category) business.category = category;
+    if (phone) business.phone = phone;
+    if (address) business.address = address;
+    if (website !== undefined) business.website = website;
+    if (maxCapacity !== undefined) business.maxCapacity = Number(maxCapacity);
+    if (queueConfig) {
+      if (!business.queueConfig) business.queueConfig = {};
+      if (queueConfig.name) business.queueConfig.name = queueConfig.name;
+      if (queueConfig.startTime) business.queueConfig.startTime = queueConfig.startTime;
+      if (queueConfig.endTime) business.queueConfig.endTime = queueConfig.endTime;
+      if (queueConfig.serviceTime !== undefined) {
+        business.queueConfig.serviceTime = Number(queueConfig.serviceTime);
+      }
+    }
+
+    await business.save();
+
+    // Socket notify
+    const io = req.app.get('io');
+    if (io) {
+      io.to('superadmin').emit('businessesUpdated');
+      io.to(businessId.toString()).emit('tokenUpdated', { action: 'businessProfileUpdated' });
+    }
+
+    res.json({ success: true, message: 'Business updated successfully', business });
+  } catch (error) {
+    console.error('Update business error:', error);
+    res.status(500).json({ success: false, message: 'Server error' });
+  }
+};
+
 module.exports = {
   getBusinesses,
   getBusinessDetail,
   deleteBusiness,
+  updateBusiness,
   getUsers,
   getGlobalMetrics,
   

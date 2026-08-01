@@ -87,15 +87,24 @@ const SuperAdminReports = () => {
       const res = await api.get('/superadmin/ads');
       if (res.data.success) {
         const ads = res.data.ads;
-        const headers = ['Ad Title', 'Business Name', 'Active Status', 'Priority', 'Duration (seconds)', 'Created At'];
-        const rows = ads.map(ad => [
-          ad.title,
-          ad.businessId?.name || 'Global / All',
-          ad.isActive ? 'Active' : 'Inactive',
-          ad.priority || 'Normal',
-          ad.duration || 10,
-          ad.createdAt ? new Date(ad.createdAt).toLocaleString() : ''
-        ]);
+        const headers = ['Ad Campaign Name', 'Placements', 'Active Status', 'URL', 'Views', 'Clicks', 'CTR (%)', 'Targeting Type', 'Created At'];
+        const rows = ads.map(ad => {
+          const ctr = ad.views > 0 ? ((ad.clicks / ad.views) * 100).toFixed(2) : '0.00';
+          const placements = ad.positions && ad.positions.length 
+            ? ad.positions.join(' | ') 
+            : (ad.position || 'N/A');
+          return [
+            ad.name,
+            placements,
+            ad.isActive ? 'Active' : 'Inactive',
+            ad.url,
+            ad.views || 0,
+            ad.clicks || 0,
+            `${ctr}%`,
+            ad.targeting?.type || 'GLOBAL',
+            ad.createdAt ? new Date(ad.createdAt).toLocaleString() : ''
+          ];
+        });
         downloadCSV(headers, rows, `whistle_ads_${new Date().toISOString().split('T')[0]}`);
       }
     } catch (err) {

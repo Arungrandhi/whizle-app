@@ -87,11 +87,13 @@ const SuperAdminBusinessDetail = () => {
     setSuccess('');
     try {
       // Direct updates (Super admin updates profile details)
-      const res = await api.put('/admin/business', {
+      const res = await api.put(`/superadmin/businesses/${id}`, {
         name: formData.name,
         category: formData.category,
         phone: formData.phone,
         address: formData.address,
+        website: formData.website,
+        maxCapacity: Number(formData.maxCapacity),
         queueConfig: {
           name: business.queueConfig?.name || 'General OPD Queue',
           startTime: business.queueConfig?.startTime || '09:00',
@@ -102,10 +104,12 @@ const SuperAdminBusinessDetail = () => {
       if (res.data.success) {
         setSuccess('Business profile updated successfully!');
         setBusiness(res.data.business);
+        setTimeout(() => setSuccess(''), 5000);
       }
     } catch (err) {
       console.error('Error updating business profile', err);
-      setError('Failed to save profile changes.');
+      setError(err.response?.data?.message || 'Failed to save profile changes.');
+      setTimeout(() => setError(''), 5000);
     }
   };
 
@@ -121,7 +125,8 @@ const SuperAdminBusinessDetail = () => {
       }
     } catch (err) {
       console.error('Error deleting business', err);
-      setError('Could not deactivate business.');
+      setError(err.response?.data?.message || 'Could not deactivate business.');
+      setTimeout(() => setError(''), 5000);
     }
   };
 

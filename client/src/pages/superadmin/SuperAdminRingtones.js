@@ -9,6 +9,16 @@ const SuperAdminRingtones = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const triggerSuccess = (msg) => {
+    setSuccess(msg);
+    setTimeout(() => setSuccess(''), 5000);
+  };
+
+  const triggerError = (msg) => {
+    setError(msg);
+    setTimeout(() => setError(''), 5000);
+  };
+
   // Upload modal states
   const [showModal, setShowModal] = useState(false);
   const [soundName, setSoundName] = useState('');
@@ -75,7 +85,7 @@ const SuperAdminRingtones = () => {
     const file = e.target.files[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        setError('Audio file size must be less than 5MB');
+        triggerError('Audio file size must be less than 5MB');
         return;
       }
       const reader = new FileReader();
@@ -102,7 +112,7 @@ const SuperAdminRingtones = () => {
   const handleCreateRingtone = async (e) => {
     e.preventDefault();
     if (!soundName || !soundFile) {
-      setError('Please provide a name and select an audio file.');
+      triggerError('Please provide a name and select an audio file.');
       return;
     }
 
@@ -117,7 +127,7 @@ const SuperAdminRingtones = () => {
         isDefault: isDefaultUpload
       });
       if (res.data.success) {
-        setSuccess(`Ringtone "${soundName}" uploaded successfully!`);
+        triggerSuccess(`Ringtone "${soundName}" uploaded successfully!`);
         setSoundName('');
         setSoundFile('');
         setSoundDuration('0:15 sec');
@@ -127,7 +137,7 @@ const SuperAdminRingtones = () => {
       }
     } catch (err) {
       console.error('Error uploading ringtone', err);
-      setError(err.response?.data?.message || 'Failed to upload ringtone.');
+      triggerError(err.response?.data?.message || 'Failed to upload ringtone.');
     } finally {
       setUploading(false);
     }
@@ -136,30 +146,77 @@ const SuperAdminRingtones = () => {
   const handleToggleActive = async (id, name) => {
     setError('');
     setSuccess('');
+
+    const targetRingtone = ringtones.find(r => r._id === id);
+    if (!targetRingtone) return;
+
+    if (targetRingtone.isActive && targetRingtone.isDefault) {
+      triggerError('Default ringtone must remain active');
+      return;
+    }
+
+    const previousRingtones = [...ringtones];
+    const isActivating = !targetRingtone.isActive;
+
+    // Optimistically update the switch state in local memory
+    const updatedRingtones = ringtones.map(r => {
+      if (isActivating) {
+        return {
+          ...r,
+          isActive: r._id === id
+        };
+      } else {
+        return {
+          ...r,
+          isActive: r.isDefault ? true : (r._id === id ? false : r.isActive)
+        };
+      }
+    });
+
+    setRingtones(updatedRingtones);
+
     try {
       const res = await api.put(`/superadmin/ringtones/${id}/toggle`);
       if (res.data.success) {
-        setSuccess(`Status changed for Ringtone "${name}".`);
+        triggerSuccess(`Status changed for Ringtone "${name}".`);
         fetchRingtones();
+      } else {
+        setRingtones(previousRingtones);
       }
     } catch (err) {
       console.error('Error toggling status', err);
-      setError('Failed to toggle status.');
+      setRingtones(previousRingtones);
+      triggerError(err.response?.data?.message || 'Failed to toggle status.');
     }
   };
 
   const handleSetDefault = async (id) => {
     setError('');
     setSuccess('');
+
+    const previousRingtones = [...ringtones];
+
+    // Optimistically update DEFAULT badge and switch states
+    const updatedRingtones = ringtones.map(r => ({
+      ...r,
+      isDefault: r._id === id,
+      isActive: r._id === id
+    }));
+
+    setRingtones(updatedRingtones);
+
     try {
       const res = await api.put(`/superadmin/ringtones/${id}/default`);
       if (res.data.success) {
-        setSuccess('System default ringtone updated.');
+        triggerSuccess('System default ringtone updated.');
         fetchRingtones();
+      } else {
+        setRingtones(previousRingtones);
       }
     } catch (err) {
       console.error('Error setting default ringtone', err);
-      setError('Failed to update default ringtone.');
+      setRingtones(previousRingtones);
+      triggerError('Failed to update default ringtone.');
     }
   };
 
@@ -177,13 +234,13 @@ const SuperAdminRingtones = () => {
     try {
       const res = await api.put(`/superadmin/ringtones/${editId}`, { name: editName });
       if (res.data.success) {
-        setSuccess(`Ringtone name updated successfully!`);
+        triggerSuccess(`Ringtone name updated successfully!`);
         setShowEditModal(false);
         fetchRingtones();
       }
     } catch (err) {
       console.error('Error updating ringtone', err);
-      setError('Failed to update ringtone.');
+      triggerError('Failed to update ringtone.');
     }
   };
 
@@ -201,12 +258,12 @@ const SuperAdminRingtones = () => {
     try {
       const res = await api.delete(`/superadmin/ringtones/${id}`);
       if (res.data.success) {
-        setSuccess(`Successfully deleted sound "${name}".`);
+        triggerSuccess(`Successfully deleted sound "${name}".`);
         fetchRingtones();
       }
     } catch (err) {
       console.error('Error deleting ringtone', err);
-      setError('Failed to delete sound.');
+      triggerError(err.response?.data?.message || 'Failed to delete sound.');
     }
   };
 
@@ -227,7 +284,7 @@ const SuperAdminRingtones = () => {
     const newAudio = new Audio(r.file);
     newAudio.play().catch(err => {
       console.error("Audio play failed", err);
-      setError("Unable to play audio. Check file source.");
+      triggerError("Unable to play audio. Check file source.");
     });
     setAudioRef(newAudio);
     setPlayingId(r._id);
@@ -437,18 +494,52 @@ const SuperAdminRingtones = () => {
 
                   <div className="d-flex align-items-center gap-2">
                     <button 
-                      className="btn btn-outline-secondary btn-sm border-0 rounded-circle p-1.5"
+                      className="btn btn-sm d-flex align-items-center justify-content-center"
                       title="Edit ringtone"
                       onClick={() => handleEditClick(r)}
+                      style={{ 
+                        width: '34px', 
+                        height: '34px', 
+                        borderRadius: '8px', 
+                        backgroundColor: '#f3f4f6', 
+                        color: '#4b5563',
+                        border: 'none',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#e5e7eb';
+                        e.currentTarget.style.color = '#1f2937';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#f3f4f6';
+                        e.currentTarget.style.color = '#4b5563';
+                      }}
                     >
-                      <i className="bi bi-pencil fs-6 text-muted"></i>
+                      <i className="bi bi-pencil fs-6"></i>
                     </button>
                     <button 
-                      className="btn btn-outline-danger btn-sm border-0 rounded-circle p-1.5"
+                      className="btn btn-sm d-flex align-items-center justify-content-center"
                       title="Delete ringtone"
                       onClick={() => handleDelete(r._id, r.name)}
+                      style={{ 
+                        width: '34px', 
+                        height: '34px', 
+                        borderRadius: '8px', 
+                        backgroundColor: '#fee2e2', 
+                        color: '#ef4444',
+                        border: 'none',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = '#ef4444';
+                        e.currentTarget.style.color = '#ffffff';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = '#fee2e2';
+                        e.currentTarget.style.color = '#ef4444';
+                      }}
                     >
-                      <i className="bi bi-trash fs-6 text-danger"></i>
+                      <i className="bi bi-trash fs-6"></i>
                     </button>
                   </div>
                 </div>

@@ -56,6 +56,14 @@ const BusinessSchema = new mongoose.Schema(
       type: String,
       default: '#007bff'
     },
+    website: {
+      type: String,
+      default: ''
+    },
+    maxCapacity: {
+      type: Number,
+      default: 100
+    },
     queueConfig: {
       name: { type: String, required: true },
       startTime: { type: String, required: true }, // e.g. "09:00"

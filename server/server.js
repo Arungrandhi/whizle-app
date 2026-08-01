@@ -45,7 +45,23 @@ io.on('connection', (socket) => {
 });
 
 // Connect to Database
-connectDB();
+connectDB().then(async () => {
+  try {
+    const Ringtone = require('./models/Ringtone');
+    const ringtones = await Ringtone.find();
+    if (ringtones.length > 0) {
+      const activeRingtones = ringtones.filter(r => r.isActive);
+      if (activeRingtones.length > 1 || activeRingtones.length === 0) {
+        const defaultR = ringtones.find(r => r.isDefault) || ringtones[0];
+        await Ringtone.updateMany({ _id: { $ne: defaultR._id } }, { isActive: false });
+        await Ringtone.updateOne({ _id: defaultR._id }, { isActive: true, isDefault: true });
+        console.log('Database self-healing: cleaned up duplicate active ringtones on startup.');
+      }
+    }
+  } catch (err) {
+    console.error('Error running startup database healing:', err);
+  }
+});
 
 // CORS Configuration
 const allowedOrigins = [

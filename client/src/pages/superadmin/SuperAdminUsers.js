@@ -155,7 +155,7 @@ const SuperAdminUsers = () => {
                         {u.role}
                       </span>
                     </td>
-                    <td>+1 (555) 019-2834</td>
+                    <td>{u.businessId?.phone || 'N/A'}</td>
                     <td className="text-muted small">{new Date(u.createdAt).toLocaleDateString([], { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                   </tr>
                 ))
