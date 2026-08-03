@@ -93,6 +93,7 @@ const AdminReports = () => {
   const totals = tokens.length;
   const completed = tokens.filter(t => t.status === 'completed').length;
   const skipped = tokens.filter(t => t.status === 'skipped').length;
+  const cancelled = tokens.filter(t => t.status === 'cancelled').length;
   const waiting = tokens.filter(t => t.status === 'waiting').length;
 
   if (loading) {
@@ -126,8 +127,8 @@ const AdminReports = () => {
         </div>
         <div className="col-6 col-md-3">
           <div className="card border-0 p-3 bg-white shadow-sm rounded-3">
-            <span className="text-muted small fw-medium">Skipped/No-show</span>
-            <h3 className="fw-extrabold text-danger mt-1 mb-0">{skipped}</h3>
+            <span className="text-muted small fw-medium">Cancelled/Skipped</span>
+            <h3 className="fw-extrabold text-danger mt-1 mb-0">{cancelled + skipped}</h3>
           </div>
         </div>
         <div className="col-6 col-md-3">
@@ -173,6 +174,7 @@ const AdminReports = () => {
               <option value="serving">Serving</option>
               <option value="completed">Completed</option>
               <option value="skipped">Skipped</option>
+              <option value="cancelled">Cancelled</option>
               <option value="postponed">Postponed</option>
             </select>
 
@@ -220,6 +222,7 @@ const AdminReports = () => {
                       <span className={`badge rounded-pill text-uppercase px-2.5 py-1 ${
                         t.status === 'completed' ? 'bg-success-subtle text-success' :
                         t.status === 'skipped' ? 'bg-danger-subtle text-danger' :
+                        t.status === 'cancelled' ? 'bg-danger-subtle text-danger' :
                         t.status === 'postponed' ? 'bg-warning-subtle text-warning' :
                         t.status === 'serving' ? 'bg-warning-subtle text-warning' :
                         'bg-primary-subtle text-primary'

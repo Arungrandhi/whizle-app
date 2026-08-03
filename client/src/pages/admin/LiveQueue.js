@@ -166,18 +166,33 @@ const LiveQueue = () => {
     }
   };
 
-  const handleSkipToken = async (tokenId) => {
+  const handleMoveBackToken = async (tokenId) => {
     setError('');
     setSuccess('');
     try {
-      const res = await api.put(`/admin/tokens/${tokenId}/status`, { status: 'skipped' });
+      const res = await api.put(`/admin/tokens/${tokenId}/status`, { status: 'waiting' });
       if (res.data.success) {
-        setSuccess(`Token #${res.data.token.tokenNumber} skipped.`);
+        setSuccess(`Token #${res.data.token.tokenNumber} moved back.`);
         fetchLiveQueueData();
       }
     } catch (err) {
-      console.error('Error skipping token', err);
-      setError('Failed to skip token.');
+      console.error('Error moving token back', err);
+      setError('Failed to move token back.');
+    }
+  };
+
+  const handleCancelToken = async (tokenId) => {
+    setError('');
+    setSuccess('');
+    try {
+      const res = await api.put(`/admin/tokens/${tokenId}/status`, { status: 'cancelled' });
+      if (res.data.success) {
+        setSuccess(`Token #${res.data.token.tokenNumber} cancelled.`);
+        fetchLiveQueueData();
+      }
+    } catch (err) {
+      console.error('Error cancelling token', err);
+      setError('Failed to cancel token.');
     }
   };
 
@@ -204,10 +219,10 @@ const LiveQueue = () => {
   const remainingWaitingList = waitingList.slice(2);
   
   const servingList = tokens.filter(t => t.status === 'serving');
-  const completedList = tokens.filter(t => t.status === 'completed' || t.status === 'skipped' || t.status === 'postponed');
+  const completedList = tokens.filter(t => t.status === 'completed' || t.status === 'skipped' || t.status === 'cancelled' || t.status === 'postponed');
 
   // Stats aggregate counts
-  const totalWaitingCount = waitingList.length;
+  const totalWaitingCount = remainingWaitingList.length;
   const nextUpCount = nextUpList.length;
   const servingCount = servingList.length;
   const completedCount = completedList.length;
@@ -384,10 +399,10 @@ const LiveQueue = () => {
                   {/* Next up actions */}
                   <div className="kanban-card-actions" onClick={(e) => e.stopPropagation()}>
                     <button 
-                      className="btn btn-outline-danger btn-sm flex-grow-1 py-1 rounded-3" 
-                      onClick={() => handleSkipToken(t._id)}
+                      className="btn btn-outline-secondary btn-sm flex-grow-1 py-1 rounded-3" 
+                      onClick={() => handleMoveBackToken(t._id)}
                     >
-                      Skip
+                      Back
                     </button>
                     <button 
                       className="btn btn-primary btn-sm flex-grow-1 py-1 rounded-3 fw-bold"
@@ -435,10 +450,10 @@ const LiveQueue = () => {
                   {/* Serving actions */}
                   <div className="kanban-card-actions" onClick={(e) => e.stopPropagation()}>
                     <button 
-                      className="btn btn-outline-danger btn-sm flex-grow-1 py-1 rounded-3"
-                      onClick={() => handleSkipToken(t._id)}
+                      className="btn btn-outline-secondary btn-sm flex-grow-1 py-1 rounded-3"
+                      onClick={() => handleMoveBackToken(t._id)}
                     >
-                      Skip
+                      Back
                     </button>
                     <button 
                       className="btn btn-success btn-sm flex-grow-1 py-1 rounded-3 fw-bold border-0"
@@ -481,10 +496,12 @@ const LiveQueue = () => {
                     <span className={`badge rounded-pill ${
                       t.status === 'completed' ? 'bg-success-subtle text-success' : 
                       t.status === 'skipped' ? 'bg-danger-subtle text-danger' : 
+                      t.status === 'cancelled' ? 'bg-danger-subtle text-danger' : 
                       'bg-warning-subtle text-warning'
                     }`} style={{ fontSize: '0.6rem' }}>
                       {t.status === 'completed' ? 'Completed' : 
-                       t.status === 'skipped' ? 'Skipped' : 'Postponed'}
+                       t.status === 'skipped' ? 'Skipped' : 
+                       t.status === 'cancelled' ? 'Cancelled' : 'Postponed'}
                     </span>
                   </div>
                   <div className="kanban-card-title">{t.customerName}</div>
@@ -527,6 +544,7 @@ const LiveQueue = () => {
               <span className={`badge rounded-pill px-3 py-1.5 text-uppercase ${
                 selectedToken.token.status === 'completed' ? 'bg-success-subtle text-success' :
                 selectedToken.token.status === 'skipped' ? 'bg-danger-subtle text-danger' :
+                selectedToken.token.status === 'cancelled' ? 'bg-danger-subtle text-danger' :
                 selectedToken.token.status === 'postponed' ? 'bg-warning-subtle text-warning' :
                 selectedToken.token.status === 'serving' ? 'bg-warning-subtle text-warning' :
                 'bg-primary-subtle text-primary'
@@ -601,15 +619,6 @@ const LiveQueue = () => {
                   >
                     <i className="bi bi-megaphone me-2 fs-5"></i> Call Client
                   </button>
-                  
-                  <button 
-                    className="btn btn-light border py-2.5 rounded-3 fw-bold"
-                    onClick={() => {
-                      alert(`Token ${getQueuePrefix()}${selectedToken.token.tokenNumber} estimated wait time delayed by 10 minutes.`);
-                    }}
-                  >
-                    Delay (+10m)
-                  </button>
                 </div>
               )}
 
@@ -642,7 +651,7 @@ const LiveQueue = () => {
                 <button 
                   className="btn btn-danger w-100 py-3 rounded-3 fw-bold"
                   onClick={() => {
-                    handleSkipToken(selectedToken.token._id);
+                    handleCancelToken(selectedToken.token._id);
                     setSelectedToken(null);
                   }}
                 >

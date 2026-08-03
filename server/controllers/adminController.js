@@ -100,7 +100,7 @@ const getLiveQueue = async (req, res) => {
       query.createdAt = { $gte: startOfToday };
     }
 
-    const tokens = await Token.find(query).sort({ tokenNumber: 1 });
+    const tokens = await Token.find(query).sort({ createdAt: 1 });
     res.json({ success: true, tokens });
   } catch (error) {
     console.error('Get tokens error:', error);
@@ -202,7 +202,7 @@ const callNextToken = async (req, res) => {
   }
 };
 
-// @desc    Update Status of a specific Token (serving, completed, skipped)
+// @desc    Update Status of a specific Token (serving, completed, skipped, cancelled)
 // @route   PUT /api/admin/tokens/:id/status
 // @access  Private (Admin only)
 const updateTokenStatus = async (req, res) => {
@@ -210,7 +210,7 @@ const updateTokenStatus = async (req, res) => {
     const { status } = req.body;
     const tokenId = req.params.id;
 
-    if (!['waiting', 'serving', 'completed', 'skipped'].includes(status)) {
+    if (!['waiting', 'serving', 'completed', 'skipped', 'cancelled'].includes(status)) {
       return res.status(400).json({ success: false, message: 'Invalid status' });
     }
 
@@ -219,12 +219,21 @@ const updateTokenStatus = async (req, res) => {
       return res.status(404).json({ success: false, message: 'Token not found or unauthorized' });
     }
 
-    token.status = status;
-    if (status === 'serving') {
+    if (status === 'waiting') {
+      token.calledAt = undefined;
+      token.completedAt = undefined;
+      // If it was already waiting, it means we are re-queuing it back from Next Up to the end of the queue.
+      // So we update its createdAt timestamp to move it to the back.
+      if (token.status === 'waiting') {
+        token.createdAt = new Date();
+      }
+    } else if (status === 'serving') {
       token.calledAt = new Date();
-    } else if (status === 'completed' || status === 'skipped') {
+    } else if (status === 'completed' || status === 'skipped' || status === 'cancelled') {
       token.completedAt = new Date();
     }
+
+    token.status = status;
 
     await token.save();
 
@@ -276,6 +285,7 @@ const getDashboardMetrics = async (req, res) => {
     const serving = tokensToday.filter(t => t.status === 'serving').length;
     const completed = tokensToday.filter(t => t.status === 'completed').length;
     const skipped = tokensToday.filter(t => t.status === 'skipped').length;
+    const cancelled = tokensToday.filter(t => t.status === 'cancelled').length;
 
     // Calculate Average Wait Time
     const servedTokens = tokensToday.filter(t => t.status === 'completed' || t.status === 'serving');
@@ -301,7 +311,7 @@ const getDashboardMetrics = async (req, res) => {
         waiting,
         serving,
         completed,
-        skipped,
+        skipped: skipped + cancelled,
         avgWaitTimeMinutes,
         businessName: business ? business.name : ''
       }

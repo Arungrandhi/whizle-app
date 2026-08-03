@@ -51,6 +51,7 @@ const getBusinessDetail = async (req, res) => {
     const servingTokens = await Token.countDocuments({ businessId, status: 'serving' });
     const completedTokens = await Token.countDocuments({ businessId, status: 'completed' });
     const skippedTokens = await Token.countDocuments({ businessId, status: 'skipped' });
+    const cancelledTokens = await Token.countDocuments({ businessId, status: 'cancelled' });
 
     // Fetch all tokens for this business in the last 1 year to build analytics
     const oneYearAgo = new Date();
@@ -158,7 +159,7 @@ const getBusinessDetail = async (req, res) => {
         waitingTokens,
         servingTokens,
         completedTokens,
-        skippedTokens,
+        skippedTokens: skippedTokens + cancelledTokens,
         analytics: {
           daily: dailyData,
           weekly: weeklyData,

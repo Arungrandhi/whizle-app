@@ -39,15 +39,15 @@ const AdminDashboard = () => {
         const activeTokens = tokensRes.data.tokens;
         
         // Next waiting token (oldest waiting token today)
-        const waiting = activeTokens.filter(t => t.status === 'waiting').sort((a,b) => a.tokenNumber - b.tokenNumber);
+        const waiting = activeTokens.filter(t => t.status === 'waiting').sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
         setNextWaitingToken(waiting[0] ? `${prefix}${waiting[0].tokenNumber}` : 'None');
         
         // Active serving token
         const serving = activeTokens.find(t => t.status === 'serving');
         setActiveServingToken(serving ? `${prefix}${serving.tokenNumber}` : 'None');
         
-        // Last completed/skipped token
-        const completed = activeTokens.filter(t => t.status === 'completed' || t.status === 'skipped').sort((a,b) => b.tokenNumber - a.tokenNumber);
+        // Last completed/skipped/cancelled token
+        const completed = activeTokens.filter(t => t.status === 'completed' || t.status === 'skipped' || t.status === 'cancelled').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
         setLastCompletedToken(completed[0] ? `${prefix}${completed[0].tokenNumber}` : 'None');
       }
       setError('');
