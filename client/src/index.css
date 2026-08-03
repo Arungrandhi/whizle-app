@@ -408,6 +408,7 @@ h1, h2, h3, h4, h5, h6 {
   right: 0;
   width: 380px;
   height: 100vh;
+  height: 100dvh;
   background-color: #ffffff;
   box-shadow: -5px 0 25px rgba(0, 0, 0, 0.08);
   border-left: 1px solid #e2e8f0;
@@ -416,12 +417,19 @@ h1, h2, h3, h4, h5, h6 {
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
-  padding: 2rem 1.5rem;
+  padding: 2rem 1.5rem 3.5rem 1.5rem;
   overflow-y: auto;
 }
 
 .details-drawer.open {
   transform: translateX(0);
+}
+
+@media (max-width: 576px) {
+  .details-drawer {
+    width: 100%;
+    padding: 1.5rem 1.25rem 4.5rem 1.25rem;
+  }
 }
 
 .details-drawer-overlay {
@@ -463,8 +471,8 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Animations */
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 .animated-fade-in {

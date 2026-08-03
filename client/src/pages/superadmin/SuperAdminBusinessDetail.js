@@ -130,14 +130,6 @@ const SuperAdminBusinessDetail = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="animated-fade-in" style={{ maxWidth: '1100px' }}>
       <div className="mb-4 d-flex align-items-center">
@@ -208,31 +200,45 @@ const SuperAdminBusinessDetail = () => {
         <div className="col-6 col-md-3">
           <div className="card border-0 bg-white p-3 shadow-sm rounded-3">
             <span className="text-muted small">Avg. Daily Tokens</span>
-            <strong className="fs-4 text-dark">{stats?.totalTokens || 0}</strong>
+            <strong className="fs-4 text-dark">
+              {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : stats?.totalTokens || 0}
+            </strong>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="card border-0 bg-white p-3 shadow-sm rounded-3">
             <span className="text-muted small">Active Tokens</span>
-            <strong className="fs-4 text-primary">{stats?.waitingTokens || 0}</strong>
+            <strong className="fs-4 text-primary">
+              {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : stats?.waitingTokens || 0}
+            </strong>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="card border-0 bg-white p-3 shadow-sm rounded-3">
             <span className="text-muted small">Completed Tokens</span>
-            <strong className="fs-4 text-success">{stats?.completedTokens || 0}</strong>
+            <strong className="fs-4 text-success">
+              {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : stats?.completedTokens || 0}
+            </strong>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="card border-0 bg-white p-3 shadow-sm rounded-3">
             <span className="text-muted small">Missed Tokens</span>
-            <strong className="fs-4 text-danger">{stats?.skippedTokens || 0}</strong>
+            <strong className="fs-4 text-danger">
+              {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : stats?.skippedTokens || 0}
+            </strong>
           </div>
         </div>
       </div>
 
       {/* Information Panels Grid */}
       <form onSubmit={handleSaveChanges}>
+        {loading ? (
+          <div className="text-center py-5 bg-white rounded-4 border p-5 shadow-sm">
+            <div className="spinner-border text-primary" role="status"></div>
+          </div>
+        ) : (
+          <>
         <div className="row g-4 mb-4">
           <div className="col-lg-6">
             {/* Contact Information & Operating hours */}
@@ -418,7 +424,7 @@ const SuperAdminBusinessDetail = () => {
           </div>
         </div>
 
-        {/* Form buttons */}
+      {/* Form buttons */}
         <div className="d-flex justify-content-between align-items-center border-top pt-4">
           <button 
             type="button" 
@@ -445,7 +451,9 @@ const SuperAdminBusinessDetail = () => {
             </button>
           </div>
         </div>
-      </form>
+      </>
+    )}
+  </form>
     </div>
   );
 };

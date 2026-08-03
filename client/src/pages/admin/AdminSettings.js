@@ -94,14 +94,6 @@ const AdminSettings = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="animated-fade-in" style={{ maxWidth: '900px' }}>
       <div className="mb-4">
@@ -124,7 +116,12 @@ const AdminSettings = () => {
       )}
 
       <div className="card border-0 p-4 p-md-5 bg-white shadow-sm rounded-4">
-        <form onSubmit={handleSaveSettings}>
+        {loading ? (
+          <div className="text-center py-5">
+            <div className="spinner-border text-primary" role="status"></div>
+          </div>
+        ) : (
+          <form onSubmit={handleSaveSettings}>
           <h5 className="fw-bold mb-4 text-dark border-bottom pb-2">
             <i className="bi bi-shop text-primary me-2"></i> Business Profile Info
           </h5>
@@ -288,7 +285,8 @@ const AdminSettings = () => {
               Save Configurations Settings
             </button>
           </div>
-        </form>
+          </form>
+        )}
       </div>
     </div>
   );

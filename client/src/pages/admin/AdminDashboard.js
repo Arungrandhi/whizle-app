@@ -112,16 +112,6 @@ const AdminDashboard = () => {
     return `${diffHrs}h ${diffMins}m remaining`;
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status" style={{ width: '3rem', height: '3rem' }}>
-          <span className="visually-hidden">Loading Dashboard...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="animated-fade-in">
       {/* Header greetings */}
@@ -171,7 +161,9 @@ const AdminDashboard = () => {
           <div className="stat-widget-card shadow-sm">
             <div>
               <span className="text-muted small fw-semibold">Today's Tokens</span>
-              <h2 className="fw-extrabold text-dark mt-1 mb-0">{metrics?.totalTokens || 0}</h2>
+              <h2 className="fw-extrabold text-dark mt-1 mb-0">
+                {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : metrics?.totalTokens || 0}
+              </h2>
             </div>
             <div className="stat-widget-icon stat-widget-blue">
               <i className="bi bi-ticket-perforated-fill"></i>
@@ -183,7 +175,9 @@ const AdminDashboard = () => {
           <div className="stat-widget-card shadow-sm">
             <div>
               <span className="text-muted small fw-semibold">Waiting Area</span>
-              <h2 className="fw-extrabold text-dark mt-1 mb-0">{metrics?.waiting || 0}</h2>
+              <h2 className="fw-extrabold text-dark mt-1 mb-0">
+                {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : metrics?.waiting || 0}
+              </h2>
             </div>
             <div className="stat-widget-icon stat-widget-orange">
               <i className="bi bi-hourglass-split"></i>
@@ -196,7 +190,7 @@ const AdminDashboard = () => {
             <div>
               <span className="text-muted small fw-semibold">Active Service</span>
               <h2 className="fw-extrabold text-dark mt-1 mb-0 text-truncate" style={{ maxWidth: '120px' }}>
-                {activeServingToken}
+                {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : activeServingToken}
               </h2>
             </div>
             <div className="stat-widget-icon stat-widget-purple">
@@ -210,7 +204,13 @@ const AdminDashboard = () => {
             <div>
               <span className="text-muted small fw-semibold">Average Wait</span>
               <h2 className="fw-extrabold text-dark mt-1 mb-0">
-                {metrics?.avgWaitTimeMinutes || 0} <span className="fs-5 fw-normal text-muted">min</span>
+                {loading ? (
+                  <span className="spinner-border spinner-border-sm text-muted"></span>
+                ) : (
+                  <>
+                    {metrics?.avgWaitTimeMinutes || 0} <span className="fs-5 fw-normal text-muted">min</span>
+                  </>
+                )}
               </h2>
             </div>
             <div className="stat-widget-icon stat-widget-green">
@@ -253,19 +253,19 @@ const AdminDashboard = () => {
               <div className="flex-fill">
                 <span className="text-muted small fw-semibold d-block mb-1">Waiting</span>
                 <span className="fw-extrabold fs-2 d-block" style={{ color: '#1e88e5' }}>
-                  {nextWaitingToken}
+                  {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : nextWaitingToken}
                 </span>
               </div>
               <div className="flex-fill border-start border-end px-2">
                 <span className="text-muted small fw-semibold d-block mb-1">Serving</span>
                 <span className="fw-extrabold fs-2 d-block" style={{ color: '#8e24aa' }}>
-                  {activeServingToken}
+                  {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : activeServingToken}
                 </span>
               </div>
               <div className="flex-fill">
                 <span className="text-muted small fw-semibold d-block mb-1">Completed</span>
                 <span className="fw-extrabold fs-2 d-block" style={{ color: '#43a047' }}>
-                  {lastCompletedToken}
+                  {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : lastCompletedToken}
                 </span>
               </div>
             </div>
@@ -281,7 +281,13 @@ const AdminDashboard = () => {
             <div className="mb-4">
               <span className="text-muted small fw-medium">Volume this month</span>
               <h2 className="fw-extrabold text-dark mt-1 display-6">
-                {(metrics?.totalTokens || 0) + 8420} <span className="fs-5 fw-normal text-muted">Tokens</span>
+                {loading ? (
+                  <span className="spinner-border spinner-border-sm text-muted"></span>
+                ) : (
+                  <>
+                    {(metrics?.totalTokens || 0) + 8420} <span className="fs-5 fw-normal text-muted">Tokens</span>
+                  </>
+                )}
               </h2>
             </div>
 

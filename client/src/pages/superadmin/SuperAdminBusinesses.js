@@ -99,14 +99,6 @@ const SuperAdminBusinesses = () => {
     return matchesSearch && matchesTime;
   });
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="animated-fade-in">
       <div className="mb-4">
@@ -162,7 +154,11 @@ const SuperAdminBusinesses = () => {
 
       {/* Grid of Business Cards */}
       <div className="row g-4">
-        {filteredBusinesses.length > 0 ? (
+        {loading ? (
+          <div className="col-12 text-center py-5">
+            <div className="spinner-border text-primary" role="status"></div>
+          </div>
+        ) : filteredBusinesses.length > 0 ? (
           filteredBusinesses.map((b) => (
             <div className="col-12 col-md-6 col-lg-4" key={b._id}>
               <div className="card border-0 bg-white shadow-sm rounded-4 p-4 h-100 d-flex flex-column justify-content-between border-top border-5" style={{ borderTopColor: b.primaryColor || '#0d6efd' }}>

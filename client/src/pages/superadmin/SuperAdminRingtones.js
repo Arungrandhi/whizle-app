@@ -318,14 +318,6 @@ const SuperAdminRingtones = () => {
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="animated-fade-in">
       <div className="d-flex justify-content-between align-items-center mb-4">
@@ -359,7 +351,11 @@ const SuperAdminRingtones = () => {
 
       {/* Grid List of Sounds */}
       <div className="row g-4">
-        {ringtones.length > 0 ? (
+        {loading ? (
+          <div className="col-12 text-center py-5">
+            <div className="spinner-border text-primary" role="status"></div>
+          </div>
+        ) : ringtones.length > 0 ? (
           ringtones.map((r) => (
             <div className="col-12 col-md-6" key={r._id}>
               <div className="card border-0 bg-white shadow-sm rounded-4 p-4 d-flex flex-column h-100 justify-content-between">

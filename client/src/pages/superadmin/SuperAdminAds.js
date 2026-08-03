@@ -387,16 +387,6 @@ const SuperAdminAds = () => {
     return true;
   });
 
-  if (loading) {
-    return (
-      <div className="d-flex justify-content-center align-items-center py-5" style={{ minHeight: '350px' }}>
-        <div className="spinner-border text-primary" role="status">
-          <span className="visually-hidden">Loading...</span>
-        </div>
-      </div>
-    );
-  }
-
   // Country Selection Objects
   const countryObj = countryData.find(c => c.code === selectedCountryCode);
   const stateObj = countryObj?.states.find(s => s.code === selectedStateCode);
@@ -571,7 +561,11 @@ const SuperAdminAds = () => {
 
       {/* ADVERTISEMENT LIST (GRID LAYOUT) */}
       <div className="row g-4">
-        {filteredAds.length > 0 ? (
+        {loading ? (
+          <div className="col-12 text-center py-5">
+            <div className="spinner-border text-primary" role="status"></div>
+          </div>
+        ) : filteredAds.length > 0 ? (
           filteredAds.map((ad) => {
             const hasRegionalLocations = ad.targeting?.type === 'REGIONAL' && ad.targeting.locations?.length > 0;
             const isExpanded = !!expandedAdIds[ad._id];

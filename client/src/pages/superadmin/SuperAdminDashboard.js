@@ -199,14 +199,6 @@ const SuperAdminDashboard = () => {
     navigate(`/superadmin/businesses?filter=${item.filterType}&value=${item.filterValue}&label=${item.label}`);
   };
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="animated-fade-in">
       {/* Header greetings */}
@@ -230,7 +222,7 @@ const SuperAdminDashboard = () => {
             <div>
               <span className="text-muted small fw-semibold">TOTAL BUSINESS</span>
               <h2 className="fw-extrabold text-dark mt-1 mb-0">
-                {metrics?.totalBusinesses || 0}
+                {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : metrics?.totalBusinesses || 0}
               </h2>
               <small className="text-muted small">Registered in system</small>
             </div>
@@ -245,7 +237,7 @@ const SuperAdminDashboard = () => {
             <div>
               <span className="text-muted small fw-semibold">TOTAL USERS</span>
               <h2 className="fw-extrabold text-dark mt-1 mb-0">
-                {metrics?.totalAdmins || 0}
+                {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : metrics?.totalAdmins || 0}
               </h2>
               <small className="text-muted small">Registered accounts</small>
             </div>
@@ -260,7 +252,7 @@ const SuperAdminDashboard = () => {
             <div>
               <span className="text-muted small fw-semibold">ACTIVE ADS</span>
               <h2 className="fw-extrabold text-dark mt-1 mb-0">
-                {metrics?.totalAds || 0}
+                {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : metrics?.totalAds || 0}
               </h2>
               <small className="text-muted small">{metrics?.totalAds || 0} active campaigns</small>
             </div>
@@ -292,22 +284,28 @@ const SuperAdminDashboard = () => {
             
             {/* Visual growth CSS chart */}
             <div className="d-flex justify-content-between align-items-end pt-4" style={{ height: '180px' }}>
-              {chartData.map((b, i) => (
-                <div 
-                  key={i} 
-                  className="d-flex flex-column align-items-center flex-grow-1 h-100 justify-content-end" 
-                  title={`${b.count} registered (Click to view)`}
-                  style={{ cursor: 'pointer', position: 'relative' }}
-                  onClick={() => handleBarClick(b)}
-                >
-                  <span className="text-primary fw-bold mb-1" style={{ fontSize: '0.75rem' }}>{b.count}</span>
-                  <div 
-                    className="bg-primary bg-gradient rounded-3 w-50" 
-                    style={{ height: b.val, minHeight: '5px', transition: 'height 0.5s ease-in-out', backgroundColor: '#6f42c1' }}
-                  ></div>
-                  <span className="text-muted small mt-2" style={{ fontSize: '0.7rem' }}>{b.label}</span>
+              {loading ? (
+                <div className="w-100 text-center py-5">
+                  <div className="spinner-border text-primary" role="status"></div>
                 </div>
-              ))}
+              ) : (
+                chartData.map((b, i) => (
+                  <div 
+                    key={i} 
+                    className="d-flex flex-column align-items-center flex-grow-1 h-100 justify-content-end" 
+                    title={`${b.count} registered (Click to view)`}
+                    style={{ cursor: 'pointer', position: 'relative' }}
+                    onClick={() => handleBarClick(b)}
+                  >
+                    <span className="text-primary fw-bold mb-1" style={{ fontSize: '0.75rem' }}>{b.count}</span>
+                    <div 
+                      className="bg-primary bg-gradient rounded-3 w-50" 
+                      style={{ height: b.val, minHeight: '5px', transition: 'height 0.5s ease-in-out', backgroundColor: '#6f42c1' }}
+                    ></div>
+                    <span className="text-muted small mt-2" style={{ fontSize: '0.7rem' }}>{b.label}</span>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
@@ -350,7 +348,13 @@ const SuperAdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {users.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="5" className="text-center py-4">
+                    <div className="spinner-border text-primary" role="status"></div>
+                  </td>
+                </tr>
+              ) : users.length > 0 ? (
                 users.map((u, index) => (
                   <tr key={u._id}>
                     <td><span className="text-muted">{String(users.length - index).padStart(2, '0')}</span></td>
@@ -410,7 +414,13 @@ const SuperAdminDashboard = () => {
               </tr>
             </thead>
             <tbody>
-              {businesses.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="6" className="text-center py-4">
+                    <div className="spinner-border text-primary" role="status"></div>
+                  </td>
+                </tr>
+              ) : businesses.length > 0 ? (
                 businesses.map((b, index) => (
                   <tr key={b._id}>
                     <td><span className="text-muted">{String(businesses.length - index).padStart(2, '0')}</span></td>

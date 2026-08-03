@@ -96,14 +96,6 @@ const AdminReports = () => {
   const cancelled = tokens.filter(t => t.status === 'cancelled').length;
   const waiting = tokens.filter(t => t.status === 'waiting').length;
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="animated-fade-in">
       <div className="mb-4">
@@ -116,25 +108,33 @@ const AdminReports = () => {
         <div className="col-6 col-md-3">
           <div className="card border-0 p-3 bg-white shadow-sm rounded-3">
             <span className="text-muted small fw-medium">All generated</span>
-            <h3 className="fw-extrabold text-dark mt-1 mb-0">{totals}</h3>
+            <h3 className="fw-extrabold text-dark mt-1 mb-0">
+              {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : totals}
+            </h3>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="card border-0 p-3 bg-white shadow-sm rounded-3">
             <span className="text-muted small fw-medium">Completed</span>
-            <h3 className="fw-extrabold text-success mt-1 mb-0">{completed}</h3>
+            <h3 className="fw-extrabold text-success mt-1 mb-0">
+              {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : completed}
+            </h3>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="card border-0 p-3 bg-white shadow-sm rounded-3">
             <span className="text-muted small fw-medium">Cancelled/Skipped</span>
-            <h3 className="fw-extrabold text-danger mt-1 mb-0">{cancelled + skipped}</h3>
+            <h3 className="fw-extrabold text-danger mt-1 mb-0">
+              {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : cancelled + skipped}
+            </h3>
           </div>
         </div>
         <div className="col-6 col-md-3">
           <div className="card border-0 p-3 bg-white shadow-sm rounded-3">
             <span className="text-muted small fw-medium">Active Waiting</span>
-            <h3 className="fw-extrabold text-primary mt-1 mb-0">{waiting}</h3>
+            <h3 className="fw-extrabold text-primary mt-1 mb-0">
+              {loading ? <span className="spinner-border spinner-border-sm text-muted"></span> : waiting}
+            </h3>
           </div>
         </div>
       </div>
@@ -208,7 +208,13 @@ const AdminReports = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredTokens.length > 0 ? (
+              {loading ? (
+                <tr>
+                   <td colSpan="5" className="text-center py-5">
+                     <div className="spinner-border text-primary" role="status"></div>
+                   </td>
+                </tr>
+              ) : filteredTokens.length > 0 ? (
                 filteredTokens.map((t) => (
                   <tr key={t._id}>
                     <td>

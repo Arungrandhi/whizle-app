@@ -63,14 +63,6 @@ const SuperAdminUsers = () => {
     return matchesSearch && matchesRole && matchesTime;
   });
 
-  if (loading) {
-    return (
-      <div className="text-center py-5">
-        <div className="spinner-border text-primary" role="status"></div>
-      </div>
-    );
-  }
-
   return (
     <div className="animated-fade-in">
       <div className="mb-4">
@@ -130,7 +122,13 @@ const SuperAdminUsers = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.length > 0 ? (
+              {loading ? (
+                <tr>
+                  <td colSpan="7" className="text-center py-5">
+                    <div className="spinner-border text-primary" role="status"></div>
+                  </td>
+                </tr>
+              ) : filteredUsers.length > 0 ? (
                 filteredUsers.map((u, index) => (
                   <tr key={u._id}>
                     <td><span className="text-muted">{String(filteredUsers.length - index).padStart(2, '0')}</span></td>
