@@ -21,6 +21,20 @@ const {
   toggleAd,
   deleteAd
 } = require('../controllers/superAdminController');
+const {
+  getTrendingTopicsAdmin,
+  createTrendingTopic,
+  updateTrendingTopic,
+  deleteTrendingTopic,
+  duplicateTrendingTopic,
+  bulkUpdateTopics,
+  getTrendingConfig,
+  updateTrendingConfig,
+  regenerateTrendingFeedManual,
+  lockTrendingFeed,
+  getTrendingHistoryByDate,
+  getTrendingHistorySummary
+} = require('../controllers/trendingController');
 const { protect, authorize } = require('../middleware/auth');
 
 // All routes require authentication and superadmin role
@@ -49,5 +63,20 @@ router.post('/ads', createAd);
 router.put('/ads/:id', updateAd);
 router.put('/ads/:id/toggle', toggleAd);
 router.delete('/ads/:id', deleteAd);
+
+// Trending CRUD & Operations
+router.get('/trending/topics', getTrendingTopicsAdmin);
+router.post('/trending/topics', createTrendingTopic);
+router.put('/trending/topics/:id', updateTrendingTopic);
+router.post('/trending/topics/:id/duplicate', duplicateTrendingTopic);
+router.delete('/trending/topics/:id', deleteTrendingTopic);
+router.post('/trending/topics/bulk', bulkUpdateTopics);
+
+router.get('/trending/config', getTrendingConfig);
+router.put('/trending/config', updateTrendingConfig);
+router.post('/trending/regenerate', regenerateTrendingFeedManual);
+router.post('/trending/lock', lockTrendingFeed);
+router.get('/trending/history', getTrendingHistoryByDate);
+router.get('/trending/history/summary', getTrendingHistorySummary);
 
 module.exports = router;

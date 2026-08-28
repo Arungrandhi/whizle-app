@@ -12,18 +12,23 @@ const SuperAdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [growthFilter, setGrowthFilter] = useState('Weekly');
+  const [trendingData, setTrendingData] = useState(null);
 
   const fetchDashboardData = async () => {
     try {
       if (!metrics) setLoading(true);
-      const [metricsRes, bizRes, usersRes] = await Promise.all([
+      const [metricsRes, bizRes, usersRes, trendingRes] = await Promise.all([
         api.get('/superadmin/metrics'),
         api.get('/superadmin/businesses'),
-        api.get('/superadmin/users')
+        api.get('/superadmin/users'),
+        api.get('/trending').catch(() => ({ data: { success: false } }))
       ]);
 
       if (metricsRes.data.success) {
         setMetrics(metricsRes.data.metrics);
+      }
+      if (trendingRes.data.success) {
+        setTrendingData(trendingRes.data);
       }
       if (bizRes.data.success) {
         setAllBusinesses(bizRes.data.businesses);
@@ -55,11 +60,17 @@ const SuperAdminDashboard = () => {
     socket.on('metricsUpdated', handleUpdate);
     socket.on('businessesUpdated', handleUpdate);
     socket.on('usersUpdated', handleUpdate);
+    socket.on('trendingUpdated', handleUpdate);
+    socket.on('trendingRotationUpdated', handleUpdate);
+    socket.on('trendingRankingsRecalculated', handleUpdate);
 
     return () => {
       socket.off('metricsUpdated', handleUpdate);
       socket.off('businessesUpdated', handleUpdate);
       socket.off('usersUpdated', handleUpdate);
+      socket.off('trendingUpdated', handleUpdate);
+      socket.off('trendingRotationUpdated', handleUpdate);
+      socket.off('trendingRankingsRecalculated', handleUpdate);
     };
   }, []);
 
@@ -217,7 +228,7 @@ const SuperAdminDashboard = () => {
 
       {/* Stats row */}
       <div className="row g-3 mb-4">
-        <div className="col-md-4">
+        <div className="col-md-3">
           <div className="stat-widget-card shadow-sm">
             <div>
               <span className="text-muted small fw-semibold">TOTAL BUSINESS</span>
@@ -232,7 +243,7 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
 
-        <div className="col-md-4">
+        <div className="col-md-3">
           <div className="stat-widget-card shadow-sm">
             <div>
               <span className="text-muted small fw-semibold">TOTAL USERS</span>
@@ -247,7 +258,7 @@ const SuperAdminDashboard = () => {
           </div>
         </div>
 
-        <div className="col-md-4">
+        <div className="col-md-3">
           <div className="stat-widget-card shadow-sm">
             <div>
               <span className="text-muted small fw-semibold">ACTIVE ADS</span>
@@ -258,6 +269,48 @@ const SuperAdminDashboard = () => {
             </div>
             <div className="stat-widget-icon stat-widget-green">
               <i className="bi bi-megaphone-fill"></i>
+            </div>
+          </div>
+        </div>
+
+        <div className="col-md-3">
+          <div className="stat-widget-card shadow-sm px-3 py-3 d-flex flex-column justify-content-between" style={{ minHeight: '120px' }}>
+            <div className="w-100">
+              <div className="d-flex justify-content-between align-items-center mb-2">
+                <span className="text-muted small fw-bold">TRENDING</span>
+                <i className="bi bi-graph-up-arrow" style={{ color: '#fd7e14' }}></i>
+              </div>
+              
+              {loading ? (
+                <div className="text-center py-2">
+                  <div className="spinner-border spinner-border-sm text-muted"></div>
+                </div>
+              ) : (
+                <div className="small">
+                  <div className="d-flex justify-content-between align-items-center mb-1 text-muted">
+                    <span>Active Topics:</span>
+                    <strong className="text-dark">{trendingData?.topics?.length || 0}</strong>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center mb-1 text-muted">
+                    <span>Top Trending:</span>
+                    <strong className="text-dark text-truncate ms-1" style={{ maxWidth: '110px' }} title={trendingData?.currentlyTrending?.heading || 'None'}>
+                      {trendingData?.currentlyTrending?.heading || 'None'}
+                    </strong>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center mb-1 text-muted">
+                    <span>Total Whizles:</span>
+                    <strong className="text-dark">
+                      {trendingData?.topics?.reduce((sum, t) => sum + (t.whizlesCount || 0), 0) || 0}
+                    </strong>
+                  </div>
+                  <div className="d-flex justify-content-between align-items-center text-muted">
+                    <span>Status:</span>
+                    <strong className={trendingData?.topics?.length > 0 ? 'text-success' : 'text-danger'}>
+                      {trendingData?.topics?.length > 0 ? 'Active' : 'Inactive'}
+                    </strong>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -323,6 +376,9 @@ const SuperAdminDashboard = () => {
               </button>
               <button className="btn btn-light border btn-premium py-2.5 d-flex align-items-center justify-content-center" onClick={() => navigate('/superadmin/users')}>
                 <i className="bi bi-people me-2 fs-5"></i> View Users
+              </button>
+              <button className="btn btn-light border btn-premium py-2.5 d-flex align-items-center justify-content-center" onClick={() => navigate('/superadmin/trending')}>
+                <i className="bi bi-graph-up-arrow me-2 fs-5"></i> Manage Trending
               </button>
             </div>
           </div>

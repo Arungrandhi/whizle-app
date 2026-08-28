@@ -26,6 +26,8 @@ import SuperAdminRingtones from './pages/superadmin/SuperAdminRingtones';
 import SuperAdminAds from './pages/superadmin/SuperAdminAds';
 import SuperAdminReports from './pages/superadmin/SuperAdminReports';
 import SuperAdminSettings from './pages/superadmin/SuperAdminSettings';
+import SuperAdminTrending from './pages/superadmin/SuperAdminTrending';
+import SuperAdminLiveMobile from './pages/superadmin/SuperAdminLiveMobile';
 
 // Protector for authenticated routes with role verification (RBAC)
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -296,6 +298,22 @@ function App() {
             element={
               <ProtectedRoute allowedRoles={['superadmin']}>
                 <SuperAdminSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/trending"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin']}>
+                <SuperAdminTrending />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/superadmin/live-mobile"
+            element={
+              <ProtectedRoute allowedRoles={['superadmin']}>
+                <SuperAdminLiveMobile />
               </ProtectedRoute>
             }
           />

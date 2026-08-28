@@ -10,6 +10,7 @@ const authRoutes = require('./routes/authRoutes');
 const adminRoutes = require('./routes/adminRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const adRoutes = require('./routes/adRoutes');
+const trendingRoutes = require('./routes/trendingRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -61,6 +62,7 @@ connectDB().then(async () => {
   } catch (err) {
     console.error('Error running startup database healing:', err);
   }
+
 });
 
 // CORS Configuration
@@ -99,6 +101,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/ads', adRoutes);
+app.use('/api/trending', trendingRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

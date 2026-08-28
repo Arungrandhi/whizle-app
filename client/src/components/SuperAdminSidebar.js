@@ -88,6 +88,26 @@ const SuperAdminSidebar = ({ showMobile, toggleMobile }) => {
           </li>
           <li className="sidebar-item">
             <NavLink 
+              to="/superadmin/trending" 
+              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+              onClick={() => toggleMobile && toggleMobile(false)}
+            >
+              <i className="bi bi-graph-up-arrow"></i>
+              Trending
+            </NavLink>
+          </li>
+          <li className="sidebar-item">
+            <NavLink 
+              to="/superadmin/live-mobile" 
+              className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
+              onClick={() => toggleMobile && toggleMobile(false)}
+            >
+              <i className="bi bi-smartphone"></i>
+              Live Trend Mobile
+            </NavLink>
+          </li>
+          <li className="sidebar-item">
+            <NavLink 
               to="/superadmin/settings" 
               className={({ isActive }) => `sidebar-link ${isActive ? 'active' : ''}`}
               onClick={() => toggleMobile && toggleMobile(false)}
