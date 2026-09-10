@@ -814,6 +814,7 @@ const SuperAdminTrending = () => {
                       onChange={handleSelectAll}
                     />
                   </th>
+                  <th scope="col" style={{ width: '60px' }}>S.No.</th>
                   <th scope="col" style={{ width: '50px' }}>Pin</th>
                   <th scope="col" style={{ width: '70px' }}>Exclude</th>
                   <th scope="col">Topic Title</th>
@@ -827,12 +828,12 @@ const SuperAdminTrending = () => {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="text-center py-5">
+                    <td colSpan="10" className="text-center py-5">
                       <div className="spinner-border text-primary" role="status"></div>
                     </td>
                   </tr>
                 ) : topics.length > 0 ? (
-                  topics.map(t => (
+                  topics.map((t, index) => (
                     <tr key={t._id}>
                       <td>
                         <input 
@@ -840,6 +841,9 @@ const SuperAdminTrending = () => {
                           checked={selectedIds.includes(t._id)}
                           onChange={() => handleSelectRow(t._id)}
                         />
+                      </td>
+                      <td className="font-monospace text-muted">
+                        {(currentPage - 1) * 10 + index + 1}
                       </td>
                       <td>
                         <div className="form-check form-switch p-0 d-flex justify-content-center">
@@ -923,7 +927,7 @@ const SuperAdminTrending = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="9" className="text-center py-4 text-muted">No topics registered.</td>
+                    <td colSpan="10" className="text-center py-4 text-muted">No topics registered.</td>
                   </tr>
                 )}
               </tbody>

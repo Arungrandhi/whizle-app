@@ -333,26 +333,15 @@ const SuperAdminLiveMobile = () => {
                 )}
               </div>
 
-              {/* Backdrop dim overlay when details drawer is open */}
+              {/* Full-screen Details View */}
               {selectedTopicDetail && (
                 <div 
-                  className="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-40"
-                  style={{ zIndex: 1000, transition: 'opacity 0.25s' }}
-                  onClick={() => setSelectedTopicDetail(null)}
-                ></div>
-              )}
-
-              {/* Slide-up Details sheet drawer */}
-              {selectedTopicDetail && (
-                <div 
-                  className="position-absolute bottom-0 start-0 w-100 bg-white border-top shadow-lg p-3"
+                  className="position-absolute top-0 start-0 w-100 h-100 bg-white shadow-lg p-3"
                   style={{
-                    borderTopLeftRadius: '24px',
-                    borderTopRightRadius: '24px',
                     zIndex: 1001,
-                    maxHeight: '82%',
                     overflowY: 'auto',
-                    animation: 'slideUp 0.22s ease-out'
+                    animation: 'slideUp 0.22s ease-out',
+                    paddingTop: '48px'
                   }}
                 >
                   <style>{`
@@ -361,12 +350,6 @@ const SuperAdminLiveMobile = () => {
                       to { transform: translateY(0); }
                     }
                   `}</style>
-                  {/* Handle indicator */}
-                  <div 
-                    className="mx-auto bg-secondary bg-opacity-25 mb-3" 
-                    style={{ width: '40px', height: '5px', borderRadius: '3px', cursor: 'pointer' }}
-                    onClick={() => setSelectedTopicDetail(null)}
-                  ></div>
 
                   <div className="d-flex justify-content-between align-items-center mb-2">
                     <span className="badge bg-primary rounded-pill fw-bold" style={{ fontSize: '0.6rem' }}>RANK #{selectedTopicDetail.rank}</span>
@@ -388,14 +371,9 @@ const SuperAdminLiveMobile = () => {
                   
                   <p className="text-dark mb-2.5 fw-bold" style={{ fontSize: '0.7rem' }}>{selectedTopicDetail.shortText}</p>
                   
-                  <div className="border-top pt-2 mb-2">
+                  <div className="border-top pt-2 mb-3">
                     <span className="fw-bold text-dark d-block mb-1" style={{ fontSize: '0.7rem' }}>Full Description</span>
-                    <p className="text-muted" style={{ fontSize: '0.65rem', lineHeight: '1.4' }}>{selectedTopicDetail.description}</p>
-                  </div>
-
-                  <div className="bg-light p-2 rounded-2 mb-3 text-muted font-monospace" style={{ fontSize: '0.55rem' }}>
-                    <div>Start: {selectedTopicDetail.startAt ? new Date(selectedTopicDetail.startAt).toLocaleString() : 'Immediate'}</div>
-                    <div>End: {selectedTopicDetail.endAt ? new Date(selectedTopicDetail.endAt).toLocaleString() : 'Never'}</div>
+                    <p className="text-muted mb-0" style={{ fontSize: '0.65rem', lineHeight: '1.4' }}>{selectedTopicDetail.description}</p>
                   </div>
 
                   <div className="d-flex align-items-center justify-content-between border-top pt-2">

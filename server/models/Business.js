@@ -60,6 +60,19 @@ const BusinessSchema = new mongoose.Schema(
       type: String,
       default: ''
     },
+    qrCode: {
+      type: String,
+      default: ''
+    },
+    uniqueQrCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      index: true
+    },
+    qrGeneratedAt: {
+      type: Date
+    },
     maxCapacity: {
       type: Number,
       default: 100

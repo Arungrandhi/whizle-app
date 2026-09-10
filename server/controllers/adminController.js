@@ -1,6 +1,18 @@
+const crypto = require('crypto');
 const Business = require('../models/Business');
-const Token = require('../models/Token');
+const QRCode = require('qrcode');
 const { uploadToCloudinary } = require('../config/cloudinary');
+
+// Helper to generate a collision-resistant unique code: WHZ-QR-XXXX-XXXX
+const generateUniqueCode = () => {
+  const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+  let code = '';
+  const bytes = crypto.randomBytes(8);
+  for (let i = 0; i < 8; i++) {
+    code += chars[bytes[i] % chars.length];
+  }
+  return `WHZ-QR-${code.slice(0, 4)}-${code.slice(4)}`;
+};
 
 // @desc    Get Business Profile of Logged-in Admin
 // @route   GET /api/admin/business
@@ -40,6 +52,8 @@ const updateBusinessProfile = async (req, res) => {
       logo,
       backgroundImage,
       primaryColor,
+      website,
+      qrCode,
       queueConfig
     } = req.body;
 
@@ -51,6 +65,8 @@ const updateBusinessProfile = async (req, res) => {
     if (state) business.state = state;
     if (city) business.city = city;
     if (zipCode) business.zipCode = zipCode;
+    if (website !== undefined) business.website = website;
+    if (qrCode !== undefined) business.qrCode = qrCode;
     if (logo) {
       business.logo = await uploadToCloudinary(logo, 'logos');
     }
@@ -66,6 +82,13 @@ const updateBusinessProfile = async (req, res) => {
     }
 
     await business.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(business._id.toString()).emit('businessUpdated', { business });
+      io.to('superadmin').emit('businessesUpdated');
+    }
+
     res.json({ success: true, message: 'Business updated successfully', business });
   } catch (error) {
     console.error('Update business error:', error);
@@ -73,321 +96,207 @@ const updateBusinessProfile = async (req, res) => {
   }
 };
 
-// @desc    Get Live Queue Tokens with date filters support
-// @route   GET /api/admin/tokens
+// @desc    Generate a Unique QR Code for the Business & Save to Collection
+// @route   POST /api/admin/business/qr/generate
 // @access  Private (Admin only)
-const getLiveQueue = async (req, res) => {
+const generateQRCode = async (req, res) => {
   try {
-    const { date, startDate, endDate, all } = req.query;
-    let query = { businessId: req.user.businessId };
-
-    if (date) {
-      const start = new Date(date);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(date);
-      end.setHours(23, 59, 59, 999);
-      query.createdAt = { $gte: start, $lte: end };
-    } else if (startDate && endDate) {
-      const start = new Date(startDate);
-      start.setHours(0, 0, 0, 0);
-      const end = new Date(endDate);
-      end.setHours(23, 59, 59, 999);
-      query.createdAt = { $gte: start, $lte: end };
-    } else if (all !== 'true') {
-      // Default behavior: Fetch only today's tokens for active LiveQueue board
-      const startOfToday = new Date();
-      startOfToday.setHours(0, 0, 0, 0);
-      query.createdAt = { $gte: startOfToday };
+    const business = await Business.findById(req.user.businessId);
+    if (!business) {
+      return res.status(404).json({ success: false, message: 'Business profile not found' });
     }
 
-    const tokens = await Token.find(query).sort({ createdAt: 1 });
-    res.json({ success: true, tokens });
-  } catch (error) {
-    console.error('Get tokens error:', error);
-    res.status(500).json({ success: false, message: 'Server error fetching tokens' });
-  }
-};
+    // Generate unique alphanumeric code
+    const uniqueCode = generateUniqueCode();
 
-// @desc    Add a Token to Queue (Manual Walk-in Customer)
-// @route   POST /api/admin/tokens/add
-// @access  Private (Admin only)
-const addToken = async (req, res) => {
-  try {
-    const { customerName, customerPhone } = req.body;
-    if (!customerName || !customerPhone) {
-      return res.status(400).json({ success: false, message: 'Please provide customer name and phone number' });
+    // QR Payload: mobile deep link and structured payload
+    const qrPayload = JSON.stringify({
+      uniqueCode,
+      businessId: business._id.toString(),
+      name: business.name,
+      category: business.category,
+      scanUrl: `https://whistleapp.com/scan/${uniqueCode}`,
+      app: 'WhistleApp'
+    });
+
+    // Generate high-resolution QR code data URL
+    const qrDataUrl = await QRCode.toDataURL(qrPayload, {
+      errorCorrectionLevel: 'H',
+      type: 'image/png',
+      margin: 2,
+      width: 600,
+      color: {
+        dark: business.primaryColor || '#000000',
+        light: '#FFFFFF'
+      }
+    });
+
+    // Optionally upload to Cloudinary or save data URL directly
+    let qrCodeUrl = qrDataUrl;
+    try {
+      if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+        qrCodeUrl = await uploadToCloudinary(qrDataUrl, 'qrcodes', 'image');
+      }
+    } catch (uploadErr) {
+      console.warn('Cloudinary upload skipped, saving data URL:', uploadErr.message);
+      qrCodeUrl = qrDataUrl;
     }
 
-    const businessId = req.user.businessId;
+    business.qrCode = qrCodeUrl;
+    business.uniqueQrCode = uniqueCode;
+    business.qrGeneratedAt = new Date();
+    await business.save();
 
-    // Check count for today to generate sequential tokenNumber
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    const count = await Token.countDocuments({
-      businessId,
-      createdAt: { $gte: startOfToday }
-    });
-
-    const tokenNumber = count + 1;
-
-    const token = await Token.create({
-      businessId,
-      tokenNumber,
-      customerName,
-      customerPhone,
-      status: 'waiting'
-    });
-
-    // Real-time socket broadcast
     const io = req.app.get('io');
     if (io) {
-      io.to(businessId.toString()).emit('tokenUpdated', { action: 'create', token });
-      io.to('superadmin').emit('metricsUpdated');
+      io.to(business._id.toString()).emit('businessUpdated', { business });
     }
-
-    res.status(201).json({ success: true, token });
-  } catch (error) {
-    console.error('Add token error:', error);
-    res.status(500).json({ success: false, message: error.message || 'Server error adding token' });
-  }
-};
-
-// @desc    Call Next Token in Queue
-// @route   POST /api/admin/tokens/call
-// @access  Private (Admin only)
-const callNextToken = async (req, res) => {
-  try {
-    const businessId = req.user.businessId;
-    const startOfToday = new Date();
-    startOfToday.setHours(0, 0, 0, 0);
-
-    // Mark any active 'serving' tokens as 'completed'
-    await Token.updateMany(
-      { businessId, status: 'serving', createdAt: { $gte: startOfToday } },
-      { status: 'completed', completedAt: new Date() }
-    );
-
-    // Find the oldest 'waiting' token today
-    const nextToken = await Token.findOne({
-      businessId,
-      status: 'waiting',
-      createdAt: { $gte: startOfToday }
-    }).sort({ tokenNumber: 1 });
-
-    const io = req.app.get('io');
-
-    if (!nextToken) {
-      if (io) {
-        io.to(businessId.toString()).emit('tokenUpdated', { action: 'completeAll' });
-        io.to('superadmin').emit('metricsUpdated');
-      }
-      return res.json({ success: true, message: 'No waiting tokens in the queue', token: null });
-    }
-
-    nextToken.status = 'serving';
-    nextToken.calledAt = new Date();
-    await nextToken.save();
-
-    // Broadcast called token
-    if (io) {
-      io.to(businessId.toString()).emit('tokenUpdated', { action: 'call', token: nextToken });
-      io.to('superadmin').emit('metricsUpdated');
-    }
-
-    res.json({ success: true, token: nextToken });
-  } catch (error) {
-    console.error('Call next error:', error);
-    res.status(500).json({ success: false, message: 'Server error calling next token' });
-  }
-};
-
-// @desc    Update Status of a specific Token (serving, completed, skipped, cancelled)
-// @route   PUT /api/admin/tokens/:id/status
-// @access  Private (Admin only)
-const updateTokenStatus = async (req, res) => {
-  try {
-    const { status } = req.body;
-    const tokenId = req.params.id;
-
-    if (!['waiting', 'serving', 'completed', 'skipped', 'cancelled'].includes(status)) {
-      return res.status(400).json({ success: false, message: 'Invalid status' });
-    }
-
-    const token = await Token.findOne({ _id: tokenId, businessId: req.user.businessId });
-    if (!token) {
-      return res.status(404).json({ success: false, message: 'Token not found or unauthorized' });
-    }
-
-    if (status === 'waiting') {
-      token.calledAt = undefined;
-      token.completedAt = undefined;
-      // If it was already waiting, it means we are re-queuing it back from Next Up to the end of the queue.
-      // So we update its createdAt timestamp to move it to the back.
-      if (token.status === 'waiting') {
-        token.createdAt = new Date();
-      }
-    } else if (status === 'serving') {
-      token.calledAt = new Date();
-    } else if (status === 'completed' || status === 'skipped' || status === 'cancelled') {
-      token.completedAt = new Date();
-    }
-
-    token.status = status;
-
-    await token.save();
-
-    // Broadcast status change
-    const io = req.app.get('io');
-    if (io) {
-      io.to(token.businessId.toString()).emit('tokenUpdated', { action: 'status', token });
-      io.to('superadmin').emit('metricsUpdated');
-    }
-
-    res.json({ success: true, token });
-  } catch (error) {
-    console.error('Update status error:', error);
-    res.status(500).json({ success: false, message: 'Server error updating status' });
-  }
-};
-
-// @desc    Get Dashboard Metrics for Admin
-// @route   GET /api/admin/metrics
-// @access  Private (Admin only)
-const getDashboardMetrics = async (req, res) => {
-  try {
-    const businessId = req.user.businessId;
-    
-    // Support date query filtering
-    const { date } = req.query;
-    let queryDateStart = new Date();
-    queryDateStart.setHours(0, 0, 0, 0);
-    let queryDateEnd = new Date();
-    queryDateEnd.setHours(23, 59, 59, 999);
-
-    if (date) {
-      const parsed = new Date(date);
-      if (!isNaN(parsed.getTime())) {
-        queryDateStart = new Date(parsed);
-        queryDateStart.setHours(0, 0, 0, 0);
-        queryDateEnd = new Date(parsed);
-        queryDateEnd.setHours(23, 59, 59, 999);
-      }
-    }
-
-    const tokensToday = await Token.find({
-      businessId,
-      createdAt: { $gte: queryDateStart, $lte: queryDateEnd }
-    });
-
-    const total = tokensToday.length;
-    const waiting = tokensToday.filter(t => t.status === 'waiting').length;
-    const serving = tokensToday.filter(t => t.status === 'serving').length;
-    const completed = tokensToday.filter(t => t.status === 'completed').length;
-    const skipped = tokensToday.filter(t => t.status === 'skipped').length;
-    const cancelled = tokensToday.filter(t => t.status === 'cancelled').length;
-
-    // Calculate Average Wait Time
-    const servedTokens = tokensToday.filter(t => t.status === 'completed' || t.status === 'serving');
-    let totalWaitTimeMs = 0;
-    let waitCount = 0;
-
-    servedTokens.forEach(t => {
-      if (t.calledAt) {
-        totalWaitTimeMs += (new Date(t.calledAt) - new Date(t.createdAt));
-        waitCount++;
-      }
-    });
-
-    const avgWaitTimeMinutes = waitCount > 0 ? Math.round((totalWaitTimeMs / waitCount) / 60000) : 0;
-
-    // Get Business Info
-    const business = await Business.findById(businessId);
 
     res.json({
       success: true,
-      metrics: {
-        totalTokens: total,
-        waiting,
-        serving,
-        completed,
-        skipped: skipped + cancelled,
-        avgWaitTimeMinutes,
-        businessName: business ? business.name : ''
-      }
+      message: 'Unique QR Code generated and saved successfully',
+      qrCode: qrCodeUrl,
+      uniqueQrCode: uniqueCode,
+      qrGeneratedAt: business.qrGeneratedAt,
+      business
     });
   } catch (error) {
-    console.error('Metrics error:', error);
-    res.status(500).json({ success: false, message: 'Server error generating metrics' });
+    console.error('Generate QR Code error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Error generating QR Code' });
   }
 };
 
-// @desc    Postpone Token to Another Day
-// @route   PUT /api/admin/tokens/:id/postpone
+// @desc    Update / Upload Custom QR Code for the Business
+// @route   PUT /api/admin/business/qr
 // @access  Private (Admin only)
-const postponeToken = async (req, res) => {
+const updateQRCode = async (req, res) => {
   try {
-    const { postponedDate } = req.body;
-    const tokenId = req.params.id;
-
-    if (!postponedDate) {
-      return res.status(400).json({ success: false, message: 'Please specify a date to postpone' });
+    const { qrCode } = req.body;
+    if (!qrCode) {
+      return res.status(400).json({ success: false, message: 'QR Code data or image is required' });
     }
 
-    const token = await Token.findOne({ _id: tokenId, businessId: req.user.businessId });
-    if (!token) {
-      return res.status(404).json({ success: false, message: 'Token not found or unauthorized' });
+    const business = await Business.findById(req.user.businessId);
+    if (!business) {
+      return res.status(404).json({ success: false, message: 'Business profile not found' });
     }
 
-    // Mark the original token as 'postponed' today
-    token.status = 'postponed';
-    token.completedAt = new Date();
-    await token.save();
+    let finalQrUrl = qrCode;
+    // Upload if base64 provided
+    if (qrCode.startsWith('data:image/')) {
+      try {
+        if (process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY) {
+          finalQrUrl = await uploadToCloudinary(qrCode, 'qrcodes', 'image');
+        }
+      } catch (uploadErr) {
+        console.warn('Cloudinary upload fallback to data URL:', uploadErr.message);
+        finalQrUrl = qrCode;
+      }
+    }
 
-    // Count existing tokens on target day to compute new sequential tokenNumber
-    const targetStart = new Date(postponedDate);
-    targetStart.setHours(0, 0, 0, 0);
-    const targetEnd = new Date(postponedDate);
-    targetEnd.setHours(23, 59, 59, 999);
+    // Assign unique code if not yet assigned
+    if (!business.uniqueQrCode) {
+      business.uniqueQrCode = generateUniqueCode();
+    }
 
-    const count = await Token.countDocuments({
-      businessId: req.user.businessId,
-      createdAt: { $gte: targetStart, $lte: targetEnd }
-    });
+    business.qrCode = finalQrUrl;
+    business.qrGeneratedAt = new Date();
+    await business.save();
 
-    const targetDateObject = new Date(postponedDate + 'T12:00:00'); // set mid-day to prevent TZ shifts
-
-    // Create a new waiting clone token for target date
-    const postponedToken = await Token.create({
-      businessId: token.businessId,
-      tokenNumber: count + 1,
-      customerName: token.customerName,
-      customerPhone: token.customerPhone,
-      status: 'waiting',
-      createdAt: targetDateObject
-    });
-
-    // Socket notification
     const io = req.app.get('io');
     if (io) {
-      io.to(token.businessId.toString()).emit('tokenUpdated', { action: 'postpone', originalToken: token, newToken: postponedToken });
-      io.to('superadmin').emit('metricsUpdated');
+      io.to(business._id.toString()).emit('businessUpdated', { business });
     }
 
-    res.json({ success: true, message: `Token postponed to ${postponedDate}`, token: postponedToken });
+    res.json({
+      success: true,
+      message: 'QR Code updated successfully',
+      qrCode: finalQrUrl,
+      uniqueQrCode: business.uniqueQrCode,
+      qrGeneratedAt: business.qrGeneratedAt,
+      business
+    });
   } catch (error) {
-    console.error('Postpone token error:', error);
-    res.status(500).json({ success: false, message: 'Server error postponing token' });
+    console.error('Update QR Code error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Error updating QR Code' });
+  }
+};
+
+// @desc    Remove / Delete QR Code from the Business Collection
+// @route   DELETE /api/admin/business/qr
+// @access  Private (Admin only)
+const removeQRCode = async (req, res) => {
+  try {
+    const business = await Business.findById(req.user.businessId);
+    if (!business) {
+      return res.status(404).json({ success: false, message: 'Business profile not found' });
+    }
+
+    business.qrCode = '';
+    business.uniqueQrCode = undefined;
+    business.qrGeneratedAt = undefined;
+    await business.save();
+
+    const io = req.app.get('io');
+    if (io) {
+      io.to(business._id.toString()).emit('businessUpdated', { business });
+    }
+
+    res.json({
+      success: true,
+      message: 'QR Code removed successfully',
+      business
+    });
+  } catch (error) {
+    console.error('Remove QR Code error:', error);
+    res.status(500).json({ success: false, message: error.message || 'Error removing QR Code' });
+  }
+};
+
+// @desc    Verify Scanned Unique QR Code from Mobile App
+// @route   GET /api/public/qr/verify/:code
+// @access  Public
+const verifyQRCode = async (req, res) => {
+  try {
+    const { code } = req.params;
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'QR Code identifier is required' });
+    }
+
+    const business = await Business.findOne({ uniqueQrCode: code });
+    if (!business) {
+      return res.status(404).json({ success: false, message: 'Invalid, expired, or unassigned QR Code' });
+    }
+
+    res.json({
+      success: true,
+      message: 'QR Code verified successfully',
+      business: {
+        _id: business._id,
+        name: business.name,
+        category: business.category,
+        phone: business.phone,
+        address: business.address,
+        city: business.city,
+        state: business.state,
+        logo: business.logo,
+        primaryColor: business.primaryColor,
+        queueConfig: business.queueConfig,
+        uniqueQrCode: business.uniqueQrCode,
+        qrGeneratedAt: business.qrGeneratedAt
+      }
+    });
+  } catch (error) {
+    console.error('Verify QR Code error:', error);
+    res.status(500).json({ success: false, message: 'Server error verifying QR code' });
   }
 };
 
 module.exports = {
   getBusinessProfile,
   updateBusinessProfile,
-  getLiveQueue,
-  addToken,
-  callNextToken,
-  updateTokenStatus,
-  getDashboardMetrics,
-  postponeToken
+  generateQRCode,
+  updateQRCode,
+  removeQRCode,
+  verifyQRCode
 };

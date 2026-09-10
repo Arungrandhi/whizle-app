@@ -3,12 +3,9 @@ const router = express.Router();
 const {
   getBusinessProfile,
   updateBusinessProfile,
-  getLiveQueue,
-  addToken,
-  callNextToken,
-  updateTokenStatus,
-  getDashboardMetrics,
-  postponeToken
+  generateQRCode,
+  updateQRCode,
+  removeQRCode
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -18,11 +15,9 @@ router.use(authorize('admin'));
 
 router.get('/business', getBusinessProfile);
 router.put('/business', updateBusinessProfile);
-router.get('/tokens', getLiveQueue);
-router.post('/tokens/add', addToken);
-router.post('/tokens/call', callNextToken);
-router.put('/tokens/:id/status', updateTokenStatus);
-router.put('/tokens/:id/postpone', postponeToken);
-router.get('/metrics', getDashboardMetrics);
+router.post('/business/qr/generate', generateQRCode);
+router.put('/business/qr', updateQRCode);
+router.delete('/business/qr', removeQRCode);
 
 module.exports = router;
+

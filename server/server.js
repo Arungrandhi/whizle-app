@@ -11,6 +11,7 @@ const adminRoutes = require('./routes/adminRoutes');
 const superAdminRoutes = require('./routes/superAdminRoutes');
 const adRoutes = require('./routes/adRoutes');
 const trendingRoutes = require('./routes/trendingRoutes');
+const publicRoutes = require('./routes/publicRoutes');
 
 const app = express();
 const server = http.createServer(app);
@@ -102,6 +103,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/superadmin', superAdminRoutes);
 app.use('/api/ads', adRoutes);
 app.use('/api/trending', trendingRoutes);
+app.use('/api/public', publicRoutes);
 
 // Error Handling Middleware
 app.use((err, req, res, next) => {

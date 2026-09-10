@@ -1,6 +1,5 @@
 const Business = require('../models/Business');
 const User = require('../models/User');
-const Token = require('../models/Token');
 const Ringtone = require('../models/Ringtone');
 const Ad = require('../models/Ad');
 const { uploadToCloudinary } = require('../config/cloudinary');
@@ -15,12 +14,10 @@ const getBusinesses = async (req, res) => {
     const businessesWithAdmins = await Promise.all(
       businesses.map(async (biz) => {
         const adminUser = await User.findOne({ businessId: biz._id, role: 'admin' }).select('-password');
-        const totalTokens = await Token.countDocuments({ businessId: biz._id });
         
         return {
           ...biz.toObject(),
-          admin: adminUser ? { name: adminUser.name, email: adminUser.email } : null,
-          totalTokens
+          admin: adminUser ? { name: adminUser.name, email: adminUser.email } : null
         };
       })
     );
@@ -44,129 +41,11 @@ const getBusinessDetail = async (req, res) => {
     }
 
     const adminUser = await User.findOne({ businessId, role: 'admin' }).select('-password');
-    
-    // Aggregated token stats
-    const totalTokens = await Token.countDocuments({ businessId });
-    const waitingTokens = await Token.countDocuments({ businessId, status: 'waiting' });
-    const servingTokens = await Token.countDocuments({ businessId, status: 'serving' });
-    const completedTokens = await Token.countDocuments({ businessId, status: 'completed' });
-    const skippedTokens = await Token.countDocuments({ businessId, status: 'skipped' });
-    const cancelledTokens = await Token.countDocuments({ businessId, status: 'cancelled' });
-
-    // Fetch all tokens for this business in the last 1 year to build analytics
-    const oneYearAgo = new Date();
-    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
-    const tokens = await Token.find({
-      businessId,
-      createdAt: { $gte: oneYearAgo }
-    }).select('createdAt');
-
-    const today = new Date();
-    
-    // 0. Daily (9 AM to 6 PM today)
-    const startOfDay = new Date(today);
-    startOfDay.setHours(0, 0, 0, 0);
-
-    const dailyData = [
-      { label: '9 AM', count: 0 },
-      { label: '10 AM', count: 0 },
-      { label: '11 AM', count: 0 },
-      { label: '12 PM', count: 0 },
-      { label: '1 PM', count: 0 },
-      { label: '2 PM', count: 0 },
-      { label: '3 PM', count: 0 },
-      { label: '4 PM', count: 0 },
-      { label: '5 PM', count: 0 },
-      { label: '6 PM', count: 0 }
-    ];
-
-    // 1. Weekly (Mon to Sun of current week)
-    const currentDay = today.getDay();
-    const distanceToMonday = currentDay === 0 ? 6 : currentDay - 1;
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - distanceToMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    const weeklyData = [
-      { label: 'Mon', count: 0 },
-      { label: 'Tue', count: 0 },
-      { label: 'Wed', count: 0 },
-      { label: 'Thu', count: 0 },
-      { label: 'Fri', count: 0 },
-      { label: 'Sat', count: 0 },
-      { label: 'Sun', count: 0 }
-    ];
-
-    // 2. Monthly (Week 1 to Week 5 of current month)
-    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-    const monthlyData = [
-      { label: 'Week 1', count: 0 },
-      { label: 'Week 2', count: 0 },
-      { label: 'Week 3', count: 0 },
-      { label: 'Week 4', count: 0 },
-      { label: 'Week 5', count: 0 }
-    ];
-
-    // 3. Yearly (Jan to Dec of current year)
-    const startOfYear = new Date(today.getFullYear(), 0, 1);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const yearlyData = months.map(m => ({ label: m, count: 0 }));
-
-    tokens.forEach(token => {
-      const tDate = new Date(token.createdAt);
-      
-      // Daily
-      if (tDate >= startOfDay) {
-        const hour = tDate.getHours();
-        if (hour >= 9 && hour <= 18) {
-          dailyData[hour - 9].count++;
-        }
-      }
-
-      // Weekly
-      if (tDate >= startOfWeek) {
-        const day = tDate.getDay();
-        const index = day === 0 ? 6 : day - 1;
-        if (index >= 0 && index < 7) {
-          weeklyData[index].count++;
-        }
-      }
-
-      // Monthly
-      if (tDate >= startOfMonth) {
-        const date = tDate.getDate();
-        const weekIndex = Math.min(4, Math.floor((date - 1) / 7));
-        if (weekIndex >= 0 && weekIndex < 5) {
-          monthlyData[weekIndex].count++;
-        }
-      }
-
-      // Yearly
-      if (tDate >= startOfYear) {
-        const monthIndex = tDate.getMonth();
-        if (monthIndex >= 0 && monthIndex < 12) {
-          yearlyData[monthIndex].count++;
-        }
-      }
-    });
 
     res.json({
       success: true,
       business,
-      admin: adminUser,
-      stats: {
-        totalTokens,
-        waitingTokens,
-        servingTokens,
-        completedTokens,
-        skippedTokens: skippedTokens + cancelledTokens,
-        analytics: {
-          daily: dailyData,
-          weekly: weeklyData,
-          monthly: monthlyData,
-          yearly: yearlyData
-        }
-      }
+      admin: adminUser
     });
   } catch (error) {
     console.error('Get business detail error:', error);
@@ -174,7 +53,7 @@ const getBusinessDetail = async (req, res) => {
   }
 };
 
-// @desc    Delete Business and linked Admin User and Tokens
+// @desc    Delete Business and linked Admin User
 // @route   DELETE /api/superadmin/businesses/:id
 // @access  Private (Super Admin only)
 const deleteBusiness = async (req, res) => {
@@ -186,7 +65,6 @@ const deleteBusiness = async (req, res) => {
     }
 
     await User.deleteMany({ businessId });
-    await Token.deleteMany({ businessId });
     await Business.findByIdAndDelete(businessId);
 
     // Socket notify
@@ -224,9 +102,6 @@ const getGlobalMetrics = async (req, res) => {
   try {
     const totalBusinesses = await Business.countDocuments();
     const totalAdmins = await User.countDocuments({ role: 'admin' });
-    const totalTokens = await Token.countDocuments();
-    const totalWaitingTokens = await Token.countDocuments({ status: 'waiting' });
-    const totalServedTokens = await Token.countDocuments({ status: 'completed' });
     const totalAds = await Ad.countDocuments({ isActive: true });
 
     res.json({
@@ -234,9 +109,6 @@ const getGlobalMetrics = async (req, res) => {
       metrics: {
         totalBusinesses,
         totalAdmins,
-        totalTokens,
-        totalWaitingTokens,
-        totalServedTokens,
         totalAds
       }
     });
