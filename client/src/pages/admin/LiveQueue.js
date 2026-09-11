@@ -14,6 +14,12 @@ const LiveQueue = () => {
     return business?.queueConfig?.name ? business.queueConfig.name.charAt(0).toUpperCase() : 'A';
   };
 
+  const formatTokenNumber = (num) => {
+    if (!num) return '';
+    if (/^[A-Za-z]+-?\d+/.test(num)) return num;
+    return `${getQueuePrefix()}-${num}`;
+  };
+
   // Selected Token for Detail Drawer
   const [selectedToken, setSelectedToken] = useState(null);
   const [visitPurpose, setVisitPurpose] = useState('General Consultation');
@@ -349,7 +355,7 @@ const LiveQueue = () => {
                   className="kanban-card kanban-card-border-waiting"
                   onClick={() => setSelectedToken({ token: t, position: idx + 3 })} // position calculated (since nextUp takes index 0,1)
                 >
-                  <div className="kanban-card-id text-primary">{getQueuePrefix()}{t.tokenNumber}</div>
+                  <div className="kanban-card-id text-primary">{formatTokenNumber(t.tokenNumber)}</div>
                   <div className="kanban-card-title">{t.customerName}</div>
                   <div className="kanban-card-phone">{t.customerPhone}</div>
                   <div className="d-flex justify-content-between align-items-center mt-2 pt-2 border-top">
@@ -389,7 +395,7 @@ const LiveQueue = () => {
                   className="kanban-card kanban-card-border-nextup"
                   onClick={() => setSelectedToken({ token: t, position: idx + 1 })}
                 >
-                  <div className="kanban-card-id text-purple">{getQueuePrefix()}{t.tokenNumber}</div>
+                  <div className="kanban-card-id text-purple">{formatTokenNumber(t.tokenNumber)}</div>
                   <div className="kanban-card-title">{t.customerName}</div>
                   <div className="kanban-card-phone">{t.customerPhone}</div>
                   <div className="kanban-card-subtext mb-2">
@@ -440,7 +446,7 @@ const LiveQueue = () => {
                   className="kanban-card kanban-card-border-serving"
                   onClick={() => setSelectedToken({ token: t, position: 0 })}
                 >
-                  <div className="kanban-card-id text-success">{getQueuePrefix()}{t.tokenNumber}</div>
+                  <div className="kanban-card-id text-success">{formatTokenNumber(t.tokenNumber)}</div>
                   <div className="kanban-card-title">{t.customerName}</div>
                   <div className="kanban-card-phone">{t.customerPhone}</div>
                   <div className="kanban-card-subtext mb-2 text-success font-monospace fw-semibold">
@@ -492,7 +498,7 @@ const LiveQueue = () => {
                   onClick={() => setSelectedToken({ token: t, position: -1 })}
                 >
                   <div className="d-flex justify-content-between align-items-center">
-                    <div className="kanban-card-id text-muted text-decoration-line-through">{getQueuePrefix()}{t.tokenNumber}</div>
+                    <div className="kanban-card-id text-muted text-decoration-line-through">{formatTokenNumber(t.tokenNumber)}</div>
                     <span className={`badge rounded-pill ${
                       t.status === 'completed' ? 'bg-success-subtle text-success' : 
                       t.status === 'skipped' ? 'bg-danger-subtle text-danger' : 
@@ -540,7 +546,7 @@ const LiveQueue = () => {
               <span className="badge bg-primary bg-gradient rounded-pill px-3 py-1.5 fw-bold mb-2">
                 #{selectedToken.token.tokenNumber}
               </span>
-              <h2 className="fw-extrabold text-dark display-6 mb-1">{getQueuePrefix()}{selectedToken.token.tokenNumber}</h2>
+              <h2 className="fw-extrabold text-dark display-6 mb-1">{formatTokenNumber(selectedToken.token.tokenNumber)}</h2>
               <span className={`badge rounded-pill px-3 py-1.5 text-uppercase ${
                 selectedToken.token.status === 'completed' ? 'bg-success-subtle text-success' :
                 selectedToken.token.status === 'skipped' ? 'bg-danger-subtle text-danger' :
@@ -614,7 +620,7 @@ const LiveQueue = () => {
                   <button 
                     className="btn btn-outline-primary py-2.5 rounded-3 fw-bold d-flex align-items-center justify-content-center"
                     onClick={() => {
-                      alert(`Calling client ${getQueuePrefix()}${selectedToken.token.tokenNumber} via Megaphone!`);
+                      alert(`Calling client ${formatTokenNumber(selectedToken.token.tokenNumber)} via Megaphone!`);
                     }}
                   >
                     <i className="bi bi-megaphone me-2 fs-5"></i> Call Client

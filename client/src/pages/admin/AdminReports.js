@@ -11,6 +11,11 @@ const AdminReports = () => {
   const [endDate, setEndDate] = useState('');
 
   const prefix = business?.queueConfig?.name ? business.queueConfig.name.charAt(0).toUpperCase() : 'A';
+  const formatTokenNumber = (num) => {
+    if (!num) return '';
+    if (/^[A-Za-z]+-?\d+/.test(num)) return num;
+    return `${prefix}-${num}`;
+  };
 
   const formatDateTime = (dateString) => {
     if (!dateString) return '';
@@ -60,7 +65,7 @@ const AdminReports = () => {
     }
     const headers = ['Token Number', 'Customer Name', 'Customer Phone', 'Status', 'Created At', 'Called At', 'Completed At'];
     const rows = tokens.map(t => [
-      `${prefix}${t.tokenNumber}`,
+      formatTokenNumber(t.tokenNumber),
       t.customerName,
       t.customerPhone,
       t.status.toUpperCase(),
@@ -219,7 +224,7 @@ const AdminReports = () => {
                   <tr key={t._id}>
                     <td>
                       <span className="badge bg-primary-subtle text-primary rounded-pill fw-bold">
-                        {prefix}{t.tokenNumber}
+                        {formatTokenNumber(t.tokenNumber)}
                       </span>
                     </td>
                     <td><strong className="text-dark">{t.customerName}</strong></td>

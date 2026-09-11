@@ -34,21 +34,26 @@ const AdminDashboard = () => {
       }
 
       const prefix = currentBusiness?.queueConfig?.name ? currentBusiness.queueConfig.name.charAt(0).toUpperCase() : 'A';
+      const formatTokenNum = (num) => {
+        if (!num) return 'None';
+        if (/^[A-Za-z]+-?\d+/.test(num)) return num;
+        return `${prefix}-${num}`;
+      };
 
       if (tokensRes.data.success) {
         const activeTokens = tokensRes.data.tokens;
         
         // Next waiting token (oldest waiting token today)
         const waiting = activeTokens.filter(t => t.status === 'waiting').sort((a,b) => new Date(a.createdAt) - new Date(b.createdAt));
-        setNextWaitingToken(waiting[0] ? `${prefix}${waiting[0].tokenNumber}` : 'None');
+        setNextWaitingToken(waiting[0] ? formatTokenNum(waiting[0].tokenNumber) : 'None');
         
         // Active serving token
         const serving = activeTokens.find(t => t.status === 'serving');
-        setActiveServingToken(serving ? `${prefix}${serving.tokenNumber}` : 'None');
+        setActiveServingToken(serving ? formatTokenNum(serving.tokenNumber) : 'None');
         
         // Last completed/skipped/cancelled token
         const completed = activeTokens.filter(t => t.status === 'completed' || t.status === 'skipped' || t.status === 'cancelled').sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setLastCompletedToken(completed[0] ? `${prefix}${completed[0].tokenNumber}` : 'None');
+        setLastCompletedToken(completed[0] ? formatTokenNum(completed[0].tokenNumber) : 'None');
       }
       setError('');
     } catch (err) {

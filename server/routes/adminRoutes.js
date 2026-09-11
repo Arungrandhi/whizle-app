@@ -5,7 +5,12 @@ const {
   updateBusinessProfile,
   generateQRCode,
   updateQRCode,
-  removeQRCode
+  removeQRCode,
+  getAdminTokens,
+  getAdminMetrics,
+  addWalkInToken,
+  updateTokenStatus,
+  postponeToken
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middleware/auth');
 
@@ -13,11 +18,19 @@ const { protect, authorize } = require('../middleware/auth');
 router.use(protect);
 router.use(authorize('admin'));
 
+// Business Profile & QR
 router.get('/business', getBusinessProfile);
 router.put('/business', updateBusinessProfile);
 router.post('/business/qr/generate', generateQRCode);
 router.put('/business/qr', updateQRCode);
 router.delete('/business/qr', removeQRCode);
+
+// Tokens & Live Queue Management
+router.get('/tokens', getAdminTokens);
+router.get('/metrics', getAdminMetrics);
+router.post('/tokens/add', addWalkInToken);
+router.put('/tokens/:id/status', updateTokenStatus);
+router.put('/tokens/:id/postpone', postponeToken);
 
 module.exports = router;
 
